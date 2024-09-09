@@ -1,15 +1,24 @@
-﻿   $scriptBlock = {
-       # Fetch current date and time from an online source
-       $apiUrl = "http://worldtimeapi.org/api/timezone/etc/utc"
-       $response = Invoke-RestMethod -Uri $apiUrl
-       $currentDateTime = $response.datetime
+﻿# Script to synchronize system date and time with an online source
 
-       # Parse the fetched date and time
-       $format = "yyyy-MM-ddTHH:mm:ss.ffffffK"
-       $parsedDate = [datetime]::ParseExact($currentDateTime, $format, $null)
+$scriptBlock = {
+    # Define the URL of the API that provides the current date and time in UTC
+    $apiUrl = "http://worldtimeapi.org/api/timezone/etc/utc"
+    
+    # Fetch the current date and time from the API
+    $response = Invoke-RestMethod -Uri $apiUrl
+    
+    # Extract the datetime value from the API response
+    $currentDateTime = $response.datetime
 
-       # Set the system date and time
-       Set-Date -Date $parsedDate
-   }
+    # Define the format of the datetime string received from the API
+    $format = "yyyy-MM-ddTHH:mm:ss.ffffffK"
+    
+    # Parse the datetime string into a DateTime object
+    $parsedDate = [datetime]::ParseExact($currentDateTime, $format, $null)
 
-   Invoke-Command -ComputerName "Computername" -ScriptBlock $scriptBlock
+    # Set the system date and time to the parsed DateTime object
+    Set-Date -Date $parsedDate
+}
+
+# Execute the script block on the specified remote computer
+Invoke-Command -ComputerName "Computername" -ScriptBlock $scriptBlock
