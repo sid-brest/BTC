@@ -27,7 +27,7 @@ $cred = Get-Credential
 $IntervalMinutes = Read-Host "Specify the interval in minutes for the time synchronization script to run on all computers"
 
 # Function to create a time synchronization script on a remote computer
-function Create-SetTimeScript {
+function Update-SetTimeScript {
     param (
         [string]$ComputerName
     )
@@ -60,7 +60,7 @@ Set-Date -Date `$parsedDate
 }
 
 # Function to create a scheduled task for time synchronization
-function Create-ScheduledTask {
+function Update-ScheduledTask {
     param (
         [string]$ComputerName,
         [int]$IntervalMinutes
@@ -95,11 +95,11 @@ foreach ($computer in $computers) {
     # Check if the computer is accessible
     if (Test-Connection -ComputerName $computer -Count 1 -Quiet) {
         # Create the time synchronization script
-        $scriptCreated = Create-SetTimeScript -ComputerName $computer
+        $scriptCreated = Update-SetTimeScript -ComputerName $computer
 
         if ($scriptCreated) {
             # Create the scheduled task
-            $taskCreated = Create-ScheduledTask -ComputerName $computer -IntervalMinutes $IntervalMinutes
+            $taskCreated = Update-ScheduledTask -ComputerName $computer -IntervalMinutes $IntervalMinutes
 
             if ($taskCreated) {
                 Write-Host "Time synchronization task created on $computer."
