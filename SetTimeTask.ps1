@@ -23,6 +23,9 @@ $computers = Get-ComputerList
 # Prompt for credentials once
 $cred = Get-Credential
 
+# Prompt for the interval in minutes once
+$IntervalMinutes = Read-Host "Specify the interval in minutes for the time synchronization script to run on all computers"
+
 # Function to create a time synchronization script on a remote computer
 function Create-SetTimeScript {
     param (
@@ -76,7 +79,7 @@ function Create-ScheduledTask {
             }
         } -ArgumentList $command
 
-        Write-Host "Scheduled task 'TimeSync' has been created successfully on $ComputerName for all users."
+        Write-Host "Scheduled task 'TimeSync' has been created successfully on $ComputerName."
         return $true
     }
     catch {
@@ -95,14 +98,11 @@ foreach ($computer in $computers) {
         $scriptCreated = Create-SetTimeScript -ComputerName $computer
 
         if ($scriptCreated) {
-            # Prompt for the interval in minutes
-            $IntervalMinutes = Read-Host "Specify the interval in minutes for the time synchronization script to run on $computer"
-
             # Create the scheduled task
             $taskCreated = Create-ScheduledTask -ComputerName $computer -IntervalMinutes $IntervalMinutes
 
             if ($taskCreated) {
-                Write-Host "Time synchronization task created on $computer for all users."
+                Write-Host "Time synchronization task created on $computer."
             }
         }
     } else {
