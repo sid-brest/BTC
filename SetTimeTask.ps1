@@ -67,13 +67,16 @@ function Create-ScheduledTask {
     $taskRun = "Powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\Scripts\SetTime.ps1"
 
     try {
-        $command = "schtasks.exe /Create /TN `"$taskName`" /TR `"$taskRun`" /SC MINUTE /MO $IntervalMinutes /RU SYSTEM /RL HIGHEST /F"
+        $command = "schtasks.exe /Create /TN `"$taskName`" /TR `"$taskRun`" /SC MINUTE /MO $IntervalMinutes /RU `"NT AUTHORITY\SYSTEM`" /RL HIGHEST /F"
         Invoke-Command -ComputerName $ComputerName -Credential $cred -ScriptBlock {
             param($command)
-            cmd /c $command
+            $output = cmd /c $command 2>&1
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to create scheduled task. Error: $output"
+            }
         } -ArgumentList $command
 
-        Write-Host "Scheduled task 'TimeSync' has been created successfully on $ComputerName."
+        Write-Host "Scheduled task 'TimeSync' has been created successfully on $ComputerName for all users."
         return $true
     }
     catch {
@@ -99,7 +102,7 @@ foreach ($computer in $computers) {
             $taskCreated = Create-ScheduledTask -ComputerName $computer -IntervalMinutes $IntervalMinutes
 
             if ($taskCreated) {
-                Write-Host "Time synchronization task created on $computer."
+                Write-Host "Time synchronization task created on $computer for all users."
             }
         }
     } else {
