@@ -1,4 +1,30 @@
-﻿function Create-SetTimeScript {
+﻿# Function to get computers
+function Get-ComputerList {
+    $filePath = "C:\Users\107\Documents\computers.txt"
+    if (Test-Path $filePath) {
+        return Get-Content -Path $filePath
+    } else {
+        $computers = @()
+        $count = 1
+        do {
+            $computer = Read-Host "Enter a computer name $count (or press Enter to finish)"
+            if ($computer -ne "") {
+                $computers += $computer
+                $count++
+            }
+        } while ($computer -ne "")
+        return $computers
+    }
+}
+
+# Get the list of computers
+$computers = Get-ComputerList
+
+# Prompt for credentials once
+$cred = Get-Credential
+
+# Function to create a time synchronization script on a remote computer
+function Create-SetTimeScript {
     param (
         [string]$ComputerName
     )
@@ -14,7 +40,7 @@ Set-Date -Date `$parsedDate
 "@
 
     try {
-        Invoke-Command -ComputerName $ComputerName -ScriptBlock {
+        Invoke-Command -ComputerName $ComputerName -Credential $cred -ScriptBlock {
             if (-not (Test-Path "C:\Scripts")) {
                 New-Item -ItemType Directory -Path "C:\Scripts"
             }
@@ -24,10 +50,12 @@ Set-Date -Date `$parsedDate
     }
     catch {
         Write-Host "Error creating SetTime.ps1 on $ComputerName':' $_"
-        exit
+        return $false
     }
+    return $true
 }
 
+# Function to create a scheduled task for time synchronization
 function Create-ScheduledTask {
     param (
         [string]$ComputerName,
@@ -37,71 +65,50 @@ function Create-ScheduledTask {
     $taskName = "TimeSync"
     $taskRun = "Powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\Scripts\SetTime.ps1"
 
-    $command = if ($ComputerName -eq "localhost") {
-        "schtasks /Create /TN `"$taskName`" /TR `"$taskRun`" /SC MINUTE /MO $IntervalMinutes /RL HIGHEST /F"
-    } else {
-        "schtasks /Create /S $ComputerName /TN `"$taskName`" /TR `"$taskRun`" /SC MINUTE /MO $IntervalMinutes /RL HIGHEST /F"
-    }
-
     try {
-        Invoke-Expression $command
+        Invoke-Command -ComputerName $ComputerName -Credential $cred -ScriptBlock {
+            param($taskName, $taskRun, $IntervalMinutes)
+
+            # Create the scheduled task action, trigger, and principal
+            $action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c $taskRun"
+            $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes $IntervalMinutes)
+            $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+
+            # Register the scheduled task
+            Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName $taskName -Force
+
+        } -ArgumentList $taskName, $taskRun, $IntervalMinutes
+
         Write-Host "Scheduled task 'TimeSync' has been created successfully on $ComputerName."
+        return $true
     }
     catch {
         Write-Host "Error creating scheduled task on $ComputerName':' $_"
-        exit
-    }
-}
-
-function Test-ScheduledTask {
-    param (
-        [string]$ComputerName
-    )
-
-    $command = if ($ComputerName -eq "localhost") {
-        "schtasks /Run /TN `"TimeSync`""
-    } else {
-        "schtasks /Run /S $ComputerName /TN `"TimeSync`""
-    }
-
-    try {
-        Invoke-Expression $command
-        Write-Host "Scheduled task 'TimeSync' has been run successfully on $ComputerName."
-        
-        Start-Sleep -Seconds 10
-
-        $result = schtasks /Query /S $ComputerName /TN "TimeSync" /FO LIST /V | Select-String "Last Result"
-        if ($result -match "0x0") {
-            Write-Host "The task completed successfully."
-        }
-        else {
-            Write-Host "The task did not complete successfully. Last result: $result"
-        }
-    }
-    catch {
-        Write-Host "Error running scheduled task on $ComputerName':' $_"
+        return $false
     }
 }
 
 # Main script execution
-$ComputerName = Read-Host "1. Specify IP address or computer name"
+foreach ($computer in $computers) {
+    Write-Host "Connecting to $computer..."
 
-if (-not (Test-Connection -ComputerName $ComputerName -Count 1 -Quiet)) {
-    Write-Host "Error: Cannot reach $ComputerName. Please check the computer name or IP address and ensure it's accessible."
-    exit
+    # Check if the computer is accessible
+    if (Test-Connection -ComputerName $computer -Count 1 -Quiet) {
+        # Create the time synchronization script
+        $scriptCreated = Create-SetTimeScript -ComputerName $computer
+
+        if ($scriptCreated) {
+            # Prompt for the interval in minutes
+            $IntervalMinutes = Read-Host "Specify the interval in minutes for the time synchronization script to run on $computer"
+
+            # Create the scheduled task
+            $taskCreated = Create-ScheduledTask -ComputerName $computer -IntervalMinutes $IntervalMinutes
+
+            if ($taskCreated) {
+                Write-Host "Time synchronization task created on $computer."
+            }
+        }
+    } else {
+        Write-Host "$computer is not accessible."
+    }
 }
-
-$IntervalMinutes = Read-Host "2. Specify the interval in minutes for the time synchronization script to run"
-
-Write-Host "`nStarting script execution..."
-
-Write-Host "`nStep 1: Creating C:\Scripts folder and SetTime.ps1 on remote computer"
-Create-SetTimeScript -ComputerName $ComputerName
-
-Write-Host "`nStep 2: Creating scheduled task on remote computer"
-Create-ScheduledTask -ComputerName $ComputerName -IntervalMinutes $IntervalMinutes
-
-Write-Host "`nStep 3: Testing the newly created task"
-Test-ScheduledTask -ComputerName $ComputerName
-
-Write-Host "`nScript execution completed."
