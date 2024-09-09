@@ -32,8 +32,9 @@ function Create-SetTimeScript {
     $setTimeContent = @"
 # Script to synchronize system date and time with an online source
 `$apiUrl = "http://worldtimeapi.org/api/timezone/etc/utc"
-`$response = Invoke-RestMethod -Uri `$apiUrl
-`$currentDateTime = `$response.datetime
+`$webClient = New-Object System.Net.WebClient
+`$response = `$webClient.DownloadString(`$apiUrl)
+`$currentDateTime = (`$response | ConvertFrom-Json).datetime
 `$format = "yyyy-MM-ddTHH:mm:ss.ffffffK"
 `$parsedDate = [datetime]::ParseExact(`$currentDateTime, `$format, `$null)
 Set-Date -Date `$parsedDate
@@ -66,18 +67,11 @@ function Create-ScheduledTask {
     $taskRun = "Powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\Scripts\SetTime.ps1"
 
     try {
+        $command = "schtasks.exe /Create /TN `"$taskName`" /TR `"$taskRun`" /SC MINUTE /MO $IntervalMinutes /RU SYSTEM /RL HIGHEST /F"
         Invoke-Command -ComputerName $ComputerName -Credential $cred -ScriptBlock {
-            param($taskName, $taskRun, $IntervalMinutes)
-
-            # Create the scheduled task action, trigger, and principal
-            $action = New-ScheduledTaskAction -Execute "cmd.exe" -Argument "/c $taskRun"
-            $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes $IntervalMinutes)
-            $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-
-            # Register the scheduled task
-            Register-ScheduledTask -Action $action -Trigger $trigger -Principal $principal -TaskName $taskName -Force
-
-        } -ArgumentList $taskName, $taskRun, $IntervalMinutes
+            param($command)
+            cmd /c $command
+        } -ArgumentList $command
 
         Write-Host "Scheduled task 'TimeSync' has been created successfully on $ComputerName."
         return $true
