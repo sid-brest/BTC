@@ -42,12 +42,12 @@ Set-Date -Date `$parsedDate
 
     try {
         Invoke-Command -ComputerName $ComputerName -Credential $cred -ScriptBlock {
-            if (-not (Test-Path "C:\Scripts")) {
-                New-Item -ItemType Directory -Path "C:\Scripts"
+            if (-not (Test-Path "c:\Windows\Setup\Scripts")) {
+                New-Item -ItemType Directory -Path "c:\Windows\Setup\Scripts"
             }
-            $using:setTimeContent | Out-File -FilePath "C:\Scripts\SetTime.ps1" -Encoding utf8
+            $using:setTimeContent | Out-File -FilePath "c:\Windows\Setup\Scripts\SetTime.ps1" -Encoding utf8
         }
-        Write-Host "SetTime.ps1 has been created in C:\Scripts\ on $ComputerName"
+        Write-Host "SetTime.ps1 has been created in c:\Windows\Setup\Scripts\ on $ComputerName"
     }
     catch {
         Write-Host "Error creating SetTime.ps1 on $ComputerName':' $_"
@@ -64,7 +64,7 @@ function Create-ScheduledTask {
     )
 
     $taskName = "TimeSync"
-    $taskRun = "Powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\Scripts\SetTime.ps1"
+    $taskRun = "Powershell.exe -NoProfile -ExecutionPolicy Bypass -File c:\Windows\Setup\Scripts\SetTime.ps1"
 
     try {
         $command = "schtasks.exe /Create /TN `"$taskName`" /TR `"$taskRun`" /SC MINUTE /MO $IntervalMinutes /RU `"NT AUTHORITY\SYSTEM`" /RL HIGHEST /F"
