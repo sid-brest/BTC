@@ -1,5 +1,5 @@
 ﻿# Define the remote computer name
-$remoteComputer = "GerdtR1"
+$remoteComputer = "computername"
 
 # Define the firewall rules
 $firewallRules = @(
