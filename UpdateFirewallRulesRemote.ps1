@@ -1,5 +1,19 @@
-﻿# Define the remote computer name
-$remoteComputer = "computername"
+﻿# Function to get valid computer name
+function Get-ValidComputerName {
+    do {
+        $computerName = Read-Host "Enter the name of the remote computer"
+        if ([string]::IsNullOrWhiteSpace($computerName)) {
+            Write-Host "Computer name cannot be empty. Please try again."
+        } elseif (-not (Test-Connection -ComputerName $computerName -Count 1 -Quiet)) {
+            Write-Host "Unable to reach $computerName. Please check the name and try again."
+        } else {
+            return $computerName
+        }
+    } while ($true)
+}
+
+# Get remote computer name from user
+$remoteComputer = Get-ValidComputerName
 
 # Define the firewall rules
 $firewallRules = @(
@@ -11,7 +25,6 @@ $firewallRules = @(
     @{Name="Veeam VMware ESXi"; Protocol="TCP"; LocalPort="902,903"},
     @{Name="Veeam Windows SMB"; Protocol="TCP"; LocalPort="445"},
     @{Name="Veeam Agent for Linux"; Protocol="UDP"; LocalPort="6161"}
-    
 )
 
 # Function to add firewall rules
