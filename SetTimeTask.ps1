@@ -1,7 +1,21 @@
 ﻿# Function to get computers
 function Get-ComputerList {
-    $filePath = "C:\Users\107\Documents\computers.txt"
-    if (Test-Path $filePath) {
+    $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
+    $defaultFilePath = Join-Path $scriptPath "computers.txt"
+
+    if (Test-Path $defaultFilePath) {
+        $filePath = $defaultFilePath
+    } else {
+        $filePath = Read-Host "Enter the path to computers.txt file (or press Enter to skip)"
+        if ([string]::IsNullOrWhiteSpace($filePath)) {
+            $filePath = $null
+        } elseif (-not (Test-Path $filePath)) {
+            Write-Host "File not found. Proceeding with manual input."
+            $filePath = $null
+        }
+    }
+
+    if ($filePath) {
         # Read the file and filter out lines starting with '#'
         return Get-Content -Path $filePath | Where-Object { $_ -notmatch '^\s*#' -and $_ -ne '' }
     } else {
