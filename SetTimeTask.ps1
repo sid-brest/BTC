@@ -2,7 +2,8 @@
 function Get-ComputerList {
     $filePath = "C:\Users\107\Documents\computers.txt"
     if (Test-Path $filePath) {
-        return Get-Content -Path $filePath
+        # Read the file and filter out lines starting with '#'
+        return Get-Content -Path $filePath | Where-Object { $_ -notmatch '^\s*#' -and $_ -ne '' }
     } else {
         $computers = @()
         $count = 1
