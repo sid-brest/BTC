@@ -1,6 +1,9 @@
 ﻿# Function to get computers
 function Get-ComputerList {
-    $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
+    $scriptPath = $PSScriptRoot
+    if (-not $scriptPath) {
+        $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
+    }
     $defaultFilePath = Join-Path $scriptPath "computers.txt"
 
     if (Test-Path $defaultFilePath) {
