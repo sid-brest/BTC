@@ -21,7 +21,6 @@ $firewallRules = @(
     @{Name="Veeam Enterprise Manager"; Protocol="TCP"; LocalPort="9392"},
     @{Name="Veeam Backup Catalog Service"; Protocol="TCP"; LocalPort="9401"},
     @{Name="Veeam Data Transfer"; Protocol="TCP"; LocalPort="2500-3300"},
-    @{Name="Veeam Backup PowerShell"; Protocol="TCP"; LocalPort="6160"},
     @{Name="Veeam VMware ESXi"; Protocol="TCP"; LocalPort="902,903"},
     @{Name="Veeam Windows SMB"; Protocol="TCP"; LocalPort="445"},
     @{Name="Veeam Agent for Linux"; Protocol="UDP"; LocalPort="6161"}
