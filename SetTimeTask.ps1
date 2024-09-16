@@ -34,7 +34,6 @@ function Get-ComputerList {
         return $computers
     }
 }
-
 # Get the list of computers
 $computers = Get-ComputerList
 
@@ -43,6 +42,41 @@ $cred = Get-Credential
 
 # Prompt for the interval in minutes once
 $IntervalMinutes = Read-Host "Specify the interval in minutes for the time synchronization script to run on all computers"
+
+
+function Enable-RemoteAccess {
+    param (
+        [string]$ComputerName
+    )
+
+    try {
+        # Проверяем текущее состояние WinRM
+        $winrmStatus = Invoke-Command -ComputerName $ComputerName -ScriptBlock { Get-Service WinRM } -ErrorAction Stop
+
+        if ($winrmStatus.Status -ne 'Running') {
+            Write-Host "WinRM service is not running on $ComputerName. Attempting to start..."
+            Invoke-Command -ComputerName $ComputerName -ScriptBlock { 
+                Start-Service WinRM
+                Set-Service WinRM -StartupType Automatic
+            }
+        }
+
+        # Настройка WinRM для приема удаленных подключений
+        Invoke-Command -ComputerName $ComputerName -ScriptBlock {
+            Enable-PSRemoting -Force
+            Set-Item WSMan:\localhost\Client\TrustedHosts -Value "*" -Force
+            Set-Item WSMan:\localhost\Shell\MaxMemoryPerShellMB 1024
+        }
+
+        Write-Host "Remote access has been successfully enabled on $ComputerName"
+        return $true
+    }
+    catch {
+        Write-Host "Failed to enable remote access on $ComputerName. Error: $_"
+        return $false
+    }
+}
+
 
 # Function to create a time synchronization script on a remote computer
 function Update-SetTimeScript {
@@ -112,16 +146,23 @@ foreach ($computer in $computers) {
 
     # Check if the computer is accessible
     if (Test-Connection -ComputerName $computer -Count 1 -Quiet) {
-        # Create the time synchronization script
-        $scriptCreated = Update-SetTimeScript -ComputerName $computer
+        # Try to enable remote access if needed
+        $remoteAccessEnabled = Enable-RemoteAccess -ComputerName $computer
 
-        if ($scriptCreated) {
-            # Create the scheduled task
-            $taskCreated = Update-ScheduledTask -ComputerName $computer -IntervalMinutes $IntervalMinutes
+        if ($remoteAccessEnabled) {
+            # Create the time synchronization script
+            $scriptCreated = Update-SetTimeScript -ComputerName $computer
 
-            if ($taskCreated) {
-                Write-Host "Time synchronization task created on $computer."
+            if ($scriptCreated) {
+                # Create the scheduled task
+                $taskCreated = Update-ScheduledTask -ComputerName $computer -IntervalMinutes $IntervalMinutes
+
+                if ($taskCreated) {
+                    Write-Host "Time synchronization task created on $computer."
+                }
             }
+        } else {
+            Write-Host "Unable to enable remote access on $computer. Skipping..."
         }
     } else {
         Write-Host "$computer is not accessible."
