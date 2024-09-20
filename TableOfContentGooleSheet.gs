@@ -58,6 +58,7 @@ function createTableOfContents() {
   function onOpen() {
     const ui = SpreadsheetApp.getUi();
     ui.createMenu('Custom Menu')
-      .addItem('Create Table of Contents', 'createTableOfContents')
+      .addItem('Создать оглавление', 'createTableOfContents')
+      .addItem('Сортировать листы', 'sortSheets')
       .addToUi();
   }
