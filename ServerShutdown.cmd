@@ -12,14 +12,14 @@ rem 7. It's recommended to test this script in a controlled environment first.
 rem ===============================
 
 rem Set variables
-set DOMAIN=domain.local
+set DOMAIN=btc.local
 set USERNAME=username
 set PASSWORD=strongpassword
 set LOGFILE=C:\ServerShutdown.log
 
 rem Define servers
-set pc1=107Win10Test
-set pc2=107Win7Test
+set pc1=Win10
+set pc2=Win7
 rem Add more servers as needed:
 rem set pc3=AnotherServerName
 
@@ -31,7 +31,7 @@ for /L %%i in (1,1,2) do (
     if defined pc%%i (
         call :ShutdownServer %%pc%%i%%
         rem Add a delay between shutdowns
-        timeout /t 5 /nobreak >nul
+        timeout /t 10 /nobreak >nul
     )
 )
 
@@ -47,14 +47,15 @@ echo Shutting down %server%...
 echo Sending shutdown command to %server% at %date% %time% >> %LOGFILE%
 
 rem Establish connection with credentials
-net use \\%server%.%DOMAIN% /user:%DOMAIN%\%USERNAME% %PASSWORD%
+net use \\%server%.%DOMAIN% /user:%DOMAIN%\%USERNAME% %PASSWORD% 2>>%LOGFILE%
 
 if %ERRORLEVEL% EQU 0 (
     rem Connection established, proceed with shutdown
-    shutdown /s /f /m \\%server%.%DOMAIN% /t 0 /d p:0:0 /c "Remote shutdown initiated"
+    shutdown /s /f /m \\%server%.%DOMAIN% /t 0 /d p:0:0 /c "Remote shutdown initiated by script" 2>>%LOGFILE%
     if %ERRORLEVEL% EQU 0 (
         echo Shutdown command sent successfully to %server% >> %LOGFILE%
         rem Test if the server is actually shutting down
+        timeout /t 5 /nobreak >nul
         ping -n 1 -w 5000 %server% >nul
         if %ERRORLEVEL% EQU 0 (
             echo Warning: %server% is still responding after shutdown command >> %LOGFILE%
@@ -66,7 +67,7 @@ if %ERRORLEVEL% EQU 0 (
     )
     
     rem Remove the connection
-    net use \\%server%.%DOMAIN% /delete
+    net use \\%server%.%DOMAIN% /delete >nul 2>>%LOGFILE%
 ) else (
     echo Failed to establish connection with %server%. Error code: %ERRORLEVEL% >> %LOGFILE%
 )
