@@ -81,14 +81,14 @@ function Add-LocalAdminsToAdministratorsGroup {
 
     try {
         Invoke-Command -ComputerName $ComputerName -Credential $cred -ScriptBlock {
-            $group = [ADSI]"WinNT://./Administrators,group"
-            $group.Add("WinNT://DOMAIN/LocalAdmins,group")
+            $group = [ADSI]"WinNT://./Администраторы,group"
+            $group.Add("WinNT://btc.local/LocalAdmins,group")
         }
         Write-Host "Successfully added LocalAdmins to the Administrators group on $ComputerName"
         return $true
     }
     catch {
-        Write-Host "Error adding LocalAdmins to the Administrators group on $ComputerName: $_"
+        Write-Host "Error adding LocalAdmins to the Administrators group on $ComputerName":" $_"
         return $false
     }
 }
