@@ -81,10 +81,24 @@ function Add-LocalAdminsToAdministratorsGroup {
 
     try {
         Invoke-Command -ComputerName $ComputerName -Credential $cred -ScriptBlock {
-            $group = [ADSI]"WinNT://./Администраторы,group"
-            $group.Add("WinNT://btc.local/LocalAdmins,group")
+            # Get the domain name
+            $domain = (Get-WmiObject Win32_ComputerSystem).Domain
+
+            # Determine the Administrators group name based on the system language
+            $adminGroupName = (Get-WmiObject -Class Win32_Group -Filter "SID='S-1-5-32-544'").Name
+
+            # Check if LocalAdmins is already in the Administrators group
+            $group = [ADSI]"WinNT://./$adminGroupName,group"
+            $members = @($group.Invoke("Members"))
+            $localAdminsExists = $members | ForEach-Object { $_.GetType().InvokeMember("Name", 'GetProperty', $null, $_, $null) } | Where-Object { $_ -eq "LocalAdmins" }
+
+            if ($localAdminsExists) {
+                Write-Host "LocalAdmins is already a member of the $adminGroupName group on $env:COMPUTERNAME"
+            } else {
+                $group.Add("WinNT://$domain/LocalAdmins,group")
+                Write-Host "Successfully added LocalAdmins to the $adminGroupName group on $env:COMPUTERNAME"
+            }
         }
-        Write-Host "Successfully added LocalAdmins to the Administrators group on $ComputerName"
         return $true
     }
     catch {
@@ -107,7 +121,7 @@ foreach ($computer in $computers) {
             $adminGroupUpdated = Add-LocalAdminsToAdministratorsGroup -ComputerName $computer
 
             if ($adminGroupUpdated) {
-                Write-Host "LocalAdmins group added to Administrators on $computer."
+                Write-Host "LocalAdmins group processed on $computer."
             }
         } else {
             Write-Host "Unable to enable remote access on $computer. Skipping..."
