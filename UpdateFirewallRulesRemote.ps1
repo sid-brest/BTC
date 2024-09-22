@@ -31,11 +31,11 @@ function Add-VeeamFirewallRules {
     param (
         [string]$ComputerName,
         [array]$Rules,
-        [string]$Profile
+        [string]$FirewallProfile  # Changed from $Profile to $FirewallProfile
     )
 
     Invoke-Command -ComputerName $ComputerName -ScriptBlock {
-        param($Rules, $Profile)
+        param($Rules, $FirewallProfile)  # Changed parameter name here as well
         
         foreach ($rule in $Rules) {
             $existingRule = Get-NetFirewallRule -DisplayName $rule.Name -ErrorAction SilentlyContinue
@@ -43,22 +43,22 @@ function Add-VeeamFirewallRules {
             if (-not $existingRule) {
                 New-NetFirewallRule -DisplayName $rule.Name `
                                     -Direction Inbound `
-                                    -Profile $Profile `
+                                    -Profile $FirewallProfile `  # Updated here
                                     -Action Allow `
                                     -Protocol $rule.Protocol `
                                     -LocalPort $rule.LocalPort
-                Write-Host "Added firewall rule: $($rule.Name) for $Profile profile"
+                Write-Host "Added firewall rule: $($rule.Name) for $FirewallProfile profile"  # Updated here
             } else {
                 Write-Host "Firewall rule already exists: $($rule.Name)"
             }
         }
-    } -ArgumentList $Rules, $Profile
+    } -ArgumentList $Rules, $FirewallProfile  # Updated argument name here
 }
 
 # Add rules for Domain profile
-Add-VeeamFirewallRules -ComputerName $remoteComputer -Rules $firewallRules -Profile "Domain"
+Add-VeeamFirewallRules -ComputerName $remoteComputer -Rules $firewallRules -FirewallProfile "Domain"  # Updated parameter name
 
 # Add rules for Private profile
-Add-VeeamFirewallRules -ComputerName $remoteComputer -Rules $firewallRules -Profile "Private"
+Add-VeeamFirewallRules -ComputerName $remoteComputer -Rules $firewallRules -FirewallProfile "Private"  # Updated parameter name
 
 Write-Host "Firewall rules for Veeam Backup & Replication have been added to $remoteComputer for Domain and Private profiles."
