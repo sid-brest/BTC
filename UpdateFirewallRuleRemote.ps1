@@ -25,11 +25,11 @@ function Add-VeeamFirewallRules {
     param (
         [string]$ComputerName,
         [array]$Rules,
-        [string]$Profile
+        [string]$NetworkProfile  # Changed from $Profile to $NetworkProfile
     )
 
     Invoke-Command -ComputerName $ComputerName -ScriptBlock {
-        param($Rules, $Profile)
+        param($Rules, $NetworkProfile)  # Changed parameter name here as well
         
         foreach ($rule in $Rules) {
             $existingRule = Get-NetFirewallRule -DisplayName $rule.Name -ErrorAction SilentlyContinue
@@ -37,22 +37,22 @@ function Add-VeeamFirewallRules {
             if (-not $existingRule) {
                 New-NetFirewallRule -DisplayName $rule.Name `
                                     -Direction Inbound `
-                                    -Profile $Profile `
+                                    -Profile $NetworkProfile `  # Updated here
                                     -Action Allow `
                                     -Protocol $rule.Protocol `
                                     -LocalPort $rule.LocalPort
-                Write-Host "Added firewall rule: $($rule.Name) for $Profile profile"
+                Write-Host "Added firewall rule: $($rule.Name) for $NetworkProfile profile"  # Updated here
             } else {
                 Write-Host "Firewall rule already exists: $($rule.Name)"
             }
         }
-    } -ArgumentList $Rules, $Profile
+    } -ArgumentList $Rules, $NetworkProfile  # Updated argument name here
 }
 
 # Add rules for Domain profile
-Add-VeeamFirewallRules -ComputerName $remoteComputer -Rules $firewallRules -Profile "Domain"
+Add-VeeamFirewallRules -ComputerName $remoteComputer -Rules $firewallRules -NetworkProfile "Domain"
 
 # Add rules for Private profile
-Add-VeeamFirewallRules -ComputerName $remoteComputer -Rules $firewallRules -Profile "Private"
+Add-VeeamFirewallRules -ComputerName $remoteComputer -Rules $firewallRules -NetworkProfile "Private"
 
 Write-Host "Firewall rules have been added to $remoteComputer for Domain and Private profiles."
