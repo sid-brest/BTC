@@ -1,0 +1,9 @@
+#The script skips items that start with the "#" character
+srv001
+srv002
+srv004
+srv005
+srv008
+srv008
+srv012
+srv013

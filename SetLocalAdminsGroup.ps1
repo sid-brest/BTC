@@ -77,8 +77,7 @@ function Enable-RemoteAccess {
 
         Invoke-Command -ComputerName $ComputerName -ScriptBlock {
             Enable-PSRemoting -Force
-            Set-Item WSMan:\localhost\Client\TrustedHosts -Value "*" -Force
-            Set-Item WSMan:\localhost\Shell\MaxMemoryPerShellMB 1024
+            Set-Item WSMan:\localhost\Client\TrustedHosts -Value "*" -Force            
         }
 
         Write-Log "Remote access has been successfully enabled on $ComputerName"
