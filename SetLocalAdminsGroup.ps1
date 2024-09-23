@@ -1,4 +1,22 @@
-﻿# Function to get computers
+﻿# This script enables remote access and adds the 'LocalAdmins' group to the local Administrators group on multiple computers.
+# It can read computer names from a file or accept manual input, and uses PowerShell remoting to perform these tasks.
+# The script also logs all actions, errors, and successes to a log file.
+
+# Get the script name without the .ps1 extension for the log file
+$scriptName = [System.IO.Path]::GetFileNameWithoutExtension($MyInvocation.MyCommand.Name)
+$logFile = Join-Path $PSScriptRoot "$scriptName.log"
+
+# Function to write to both console and log file
+function Write-Log {
+    param (
+        [string]$Message
+    )
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $logMessage = "[$timestamp] $Message"
+    Write-Host $logMessage
+    Add-Content -Path $logFile -Value $logMessage
+}
+
 function Get-ComputerList {
     $scriptPath = $PSScriptRoot
     if (-not $scriptPath) {
@@ -13,15 +31,16 @@ function Get-ComputerList {
         if ([string]::IsNullOrWhiteSpace($filePath)) {
             $filePath = $null
         } elseif (-not (Test-Path $filePath)) {
-            Write-Host "File not found. Proceeding with manual input."
+            Write-Log "File not found. Proceeding with manual input."
             $filePath = $null
         }
     }
 
     if ($filePath) {
-        # Read the file and filter out lines starting with '#'
+        Write-Log "Reading computer list from file: $filePath"
         return Get-Content -Path $filePath | Where-Object { $_ -notmatch '^\s*#' -and $_ -ne '' }
     } else {
+        Write-Log "Manual input of computer names initiated."
         $computers = @()
         $count = 1
         do {
@@ -35,11 +54,10 @@ function Get-ComputerList {
     }
 }
 
-# Get the list of computers
 $computers = Get-ComputerList
 
-# Prompt for credentials once
 $cred = Get-Credential
+Write-Log "Credentials obtained for remote access."
 
 function Enable-RemoteAccess {
     param (
@@ -47,29 +65,27 @@ function Enable-RemoteAccess {
     )
 
     try {
-        # Check current WinRM status
         $winrmStatus = Invoke-Command -ComputerName $ComputerName -ScriptBlock { Get-Service WinRM } -ErrorAction Stop
 
         if ($winrmStatus.Status -ne 'Running') {
-            Write-Host "WinRM service is not running on $ComputerName. Attempting to start..."
+            Write-Log "WinRM service is not running on $ComputerName. Attempting to start..."
             Invoke-Command -ComputerName $ComputerName -ScriptBlock { 
                 Start-Service WinRM
                 Set-Service WinRM -StartupType Automatic
             }
         }
 
-        # Configure WinRM to accept remote connections
         Invoke-Command -ComputerName $ComputerName -ScriptBlock {
             Enable-PSRemoting -Force
             Set-Item WSMan:\localhost\Client\TrustedHosts -Value "*" -Force
             Set-Item WSMan:\localhost\Shell\MaxMemoryPerShellMB 1024
         }
 
-        Write-Host "Remote access has been successfully enabled on $ComputerName"
+        Write-Log "Remote access has been successfully enabled on $ComputerName"
         return $true
     }
     catch {
-        Write-Host "Failed to enable remote access on $ComputerName. Error: $_"
+        Write-Log "Failed to enable remote access on $ComputerName. Error: $_"
         return $false
     }
 }
@@ -81,52 +97,51 @@ function Add-LocalAdminsToAdministratorsGroup {
 
     try {
         Invoke-Command -ComputerName $ComputerName -Credential $cred -ScriptBlock {
-            # Get the domain name
             $domain = (Get-WmiObject Win32_ComputerSystem).Domain
-
-            # Determine the Administrators group name based on the system language
             $adminGroupName = (Get-WmiObject -Class Win32_Group -Filter "SID='S-1-5-32-544'").Name
-
-            # Check if LocalAdmins is already in the Administrators group
             $group = [ADSI]"WinNT://./$adminGroupName,group"
             $members = @($group.Invoke("Members"))
             $localAdminsExists = $members | ForEach-Object { $_.GetType().InvokeMember("Name", 'GetProperty', $null, $_, $null) } | Where-Object { $_ -eq "LocalAdmins" }
 
             if ($localAdminsExists) {
-                Write-Host "LocalAdmins is already a member of the $adminGroupName group on $env:COMPUTERNAME"
+                $message = "LocalAdmins is already a member of the $adminGroupName group on $env:COMPUTERNAME"
             } else {
                 $group.Add("WinNT://$domain/LocalAdmins,group")
-                Write-Host "Successfully added LocalAdmins to the $adminGroupName group on $env:COMPUTERNAME"
+                $message = "Successfully added LocalAdmins to the $adminGroupName group on $env:COMPUTERNAME"
             }
+            Write-Output $message
         }
+        Write-Log "Operation on $ComputerName":" $_"
         return $true
     }
     catch {
-        Write-Host "Error adding LocalAdmins to the Administrators group on $ComputerName":" $_"
+        Write-Log "Error adding LocalAdmins to the Administrators group on $ComputerName":" $_"
         return $false
     }
 }
 
-# Main script execution
-foreach ($computer in $computers) {
-    Write-Host "Connecting to $computer..."
+Write-Log "Script execution started."
 
-    # Check if the computer is accessible
+foreach ($computer in $computers) {
+    Write-Log "Connecting to $computer..."
+
     if (Test-Connection -ComputerName $computer -Count 1 -Quiet) {
-        # Try to enable remote access if needed
         $remoteAccessEnabled = Enable-RemoteAccess -ComputerName $computer
 
         if ($remoteAccessEnabled) {
-            # Add LocalAdmins to the Administrators group
             $adminGroupUpdated = Add-LocalAdminsToAdministratorsGroup -ComputerName $computer
 
             if ($adminGroupUpdated) {
-                Write-Host "LocalAdmins group processed on $computer."
+                Write-Log "LocalAdmins group processed on $computer."
+            } else {
+                Write-Log "Failed to process LocalAdmins group on $computer."
             }
         } else {
-            Write-Host "Unable to enable remote access on $computer. Skipping..."
+            Write-Log "Unable to enable remote access on $computer. Skipping..."
         }
     } else {
-        Write-Host "$computer is not accessible."
+        Write-Log "$computer is not accessible."
     }
 }
+
+Write-Log "Script execution completed."
