@@ -140,7 +140,7 @@ function Add-SrvAdminsToAdministratorsGroup {
         return $true
     }
     catch {
-        Write-Log "Error adding SrvAdmins to the Administrators group on $ComputerName: $_"
+        Write-Log "Error adding SrvAdmins to the Administrators group on $ComputerName":" $_"
         return $false
     }
 }
