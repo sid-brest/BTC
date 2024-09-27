@@ -17,7 +17,7 @@ $restartLogPath = Join-Path $scriptDir "vpn_service_restart_log.txt"
 $searchPattern = '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} A DoS attack on the TCP Listener \(port (443|5555|992)\) has been detected\. The connecting source IP address is \d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}, port number is \d+\. This connection will be forcefully disconnected now\.$'
 
 # Function to log restart events
-function Log-RestartEvent {
+function LogRestartEvent {
     param (
         [string]$message
     )
@@ -64,7 +64,7 @@ if (Test-Path $logFilePath) {
         $logMessage = "Service SEVPNSERVER restarted due to DoS attack detection. " +
                       "Matching log file: $logFilePath. " +
                       "Restart time: $restartTimeString"
-        Log-RestartEvent -message $logMessage
+        LogRestartEvent -message $logMessage
     } else {
         Write-Output "Less than 100 consecutive matching lines found. No action taken."
     }
