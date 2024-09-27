@@ -16,8 +16,8 @@ $restartLogPath = Join-Path $scriptDir "vpn_service_restart_log.txt"
 # The improved search pattern
 $searchPattern = '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} A DoS attack on the TCP Listener \(port (443|5555|992)\) has been detected\. The connecting source IP address is \d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}, port number is \d+\. This connection will be forcefully disconnected now\.$'
 
-# Function to log restart events
-function LogRestartEvent {
+# Function to log events
+function LogEvent {
     param (
         [string]$message
     )
@@ -25,6 +25,13 @@ function LogRestartEvent {
     $logMessage = "$timestamp - $message"
     Add-Content -Path $restartLogPath -Value $logMessage
 }
+
+# Get the start time of the check
+$checkStartTime = Get-Date
+$checkStartTimeString = $checkStartTime.ToString("yyyy-MM-dd HH:mm:ss")
+
+# Log the start of the check
+LogEvent -message "Started checking file: $logFilePath at $checkStartTimeString"
 
 # Check if the file exists
 if (Test-Path $logFilePath) {
@@ -63,11 +70,22 @@ if (Test-Path $logFilePath) {
         # Log the restart event
         $logMessage = "Service SEVPNSERVER restarted due to DoS attack detection. " +
                       "Matching log file: $logFilePath. " +
+                      "Check started at: $checkStartTimeString. " +
                       "Restart time: $restartTimeString"
-        LogRestartEvent -message $logMessage
+        LogEvent -message $logMessage
     } else {
+        $checkEndTime = Get-Date
+        $checkEndTimeString = $checkEndTime.ToString("yyyy-MM-dd HH:mm:ss")
+        $logMessage = "Check completed. No restart needed. " +
+                      "Checked file: $logFilePath. " +
+                      "Check started at: $checkStartTimeString. " +
+                      "Check ended at: $checkEndTimeString"
+        LogEvent -message $logMessage
         Write-Output "Less than 100 consecutive matching lines found. No action taken."
     }
 } else {
+    $logMessage = "Log file not found: $logFilePath. " +
+                  "Check attempted at: $checkStartTimeString"
+    LogEvent -message $logMessage
     Write-Output "Log file not found: $logFilePath"
 }
