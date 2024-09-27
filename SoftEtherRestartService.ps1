@@ -1,19 +1,27 @@
-# Get the current date in the format YYYYMMDD
+<#
+.SYNOPSIS
+This script monitors a SoftEther VPN Server log file for consecutive DoS attack entries.
+If 100 or more consecutive matching lines are found, it restarts the VPN service.
+The script logs all activities, including file checks and service restarts.
+
+.DESCRIPTION
+The script performs the following tasks:
+1. Identifies the current day's log file.
+2. Checks the log file for consecutive DoS attack entries.
+3. Restarts the VPN service if 100 or more consecutive entries are found.
+4. Logs all activities, including file checks and service restarts.
+#>
+
+# Get the current date and construct the log file name
 $currentDate = Get-Date -Format "yyyyMMdd"
-
-# Construct the log file name
 $logFileName = "vpn_$currentDate.log"
-
-# Set the path to the log file
 $logFilePath = "C:\Program Files\SoftEther VPN Server\server_log\$logFileName"
 
-# Get the directory of the current script
+# Set up the restart log file in the same directory as the script
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-
-# Set the path for the restart log file
 $restartLogPath = Join-Path $scriptDir "vpn_service_restart_log.txt"
 
-# The improved search pattern
+# Define the search pattern for DoS attack log entries
 $searchPattern = '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} A DoS attack on the TCP Listener \(port (443|5555|992)\) has been detected\. The connecting source IP address is \d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}, port number is \d+\. This connection will be forcefully disconnected now\.$'
 
 # Function to log events
@@ -26,19 +34,17 @@ function LogEvent {
     Add-Content -Path $restartLogPath -Value $logMessage
 }
 
-# Get the start time of the check
+# Record the start time of the check
 $checkStartTime = Get-Date
 $checkStartTimeString = $checkStartTime.ToString("yyyy-MM-dd HH:mm:ss")
-
-# Log the start of the check
 LogEvent -message "Started checking file: $logFilePath at $checkStartTimeString"
 
-# Check if the file exists
+# Check if the log file exists
 if (Test-Path $logFilePath) {
     # Read the content of the file
     $content = Get-Content $logFilePath
 
-    # Initialize a counter for consecutive matching lines
+    # Initialize variables for counting consecutive matches
     $consecutiveCount = 0
     $restartNeeded = $false
 
@@ -55,7 +61,7 @@ if (Test-Path $logFilePath) {
         }
     }
 
-    # Check if we need to restart the service
+    # Restart the service if needed
     if ($restartNeeded) {
         $restartTime = Get-Date
         $restartTimeString = $restartTime.ToString("yyyy-MM-dd HH:mm:ss")
@@ -74,6 +80,7 @@ if (Test-Path $logFilePath) {
                       "Restart time: $restartTimeString"
         LogEvent -message $logMessage
     } else {
+        # Log that no restart was needed
         $checkEndTime = Get-Date
         $checkEndTimeString = $checkEndTime.ToString("yyyy-MM-dd HH:mm:ss")
         $logMessage = "Check completed. No restart needed. " +
@@ -84,6 +91,7 @@ if (Test-Path $logFilePath) {
         Write-Output "Less than 100 consecutive matching lines found. No action taken."
     }
 } else {
+    # Log that the file was not found
     $logMessage = "Log file not found: $logFilePath. " +
                   "Check attempted at: $checkStartTimeString"
     LogEvent -message $logMessage
