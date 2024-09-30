@@ -1,14 +1,14 @@
 <#
 .SYNOPSIS
 This script monitors a SoftEther VPN Server log file for consecutive DoS attack entries.
-If 100 or more consecutive matching lines are found, it restarts the VPN service.
-The script logs all activities, including file checks and service restarts.
+If 100 or more consecutive matching lines are found, it restarts the VPN service,
+but only if it hasn't been restarted since the last DoS attack event.
 
 .DESCRIPTION
 The script performs the following tasks:
 1. Identifies the current day's log file.
 2. Checks the log file for consecutive DoS attack entries.
-3. Restarts the VPN service if 100 or more consecutive entries are found.
+3. Restarts the VPN service if 100 or more consecutive entries are found and the service hasn't been restarted since the last DoS event.
 4. Logs all activities, including file checks and service restarts.
 #>
 
@@ -34,6 +34,15 @@ function LogEvent {
     Add-Content -Path $restartLogPath -Value $logMessage
 }
 
+# Function to get the last restart time
+function GetLastRestartTime {
+    $lastRestartLog = Get-Content $restartLogPath | Select-String "Service SEVPNSERVER restarted" | Select-Object -Last 1
+    if ($lastRestartLog) {
+        return [DateTime]::ParseExact($lastRestartLog.Line.Substring(0, 19), "yyyy-MM-dd HH:mm:ss", $null)
+    }
+    return $null
+}
+
 # Record the start time of the check
 $checkStartTime = Get-Date
 $checkStartTimeString = $checkStartTime.ToString("yyyy-MM-dd HH:mm:ss")
@@ -47,11 +56,13 @@ if (Test-Path $logFilePath) {
     # Initialize variables for counting consecutive matches
     $consecutiveCount = 0
     $restartNeeded = $false
+    $lastDosEventTime = $null
 
     # Loop through each line in the file
     foreach ($line in $content) {
         if ($line -match $searchPattern) {
             $consecutiveCount++
+            $lastDosEventTime = [DateTime]::ParseExact($line.Substring(0, 19), "yyyy-MM-dd HH:mm:ss", $null)
             if ($consecutiveCount -ge 100) {
                 $restartNeeded = $true
                 break  # Exit the loop as soon as we reach 100 consecutive matches
@@ -61,8 +72,11 @@ if (Test-Path $logFilePath) {
         }
     }
 
-    # Restart the service if needed
-    if ($restartNeeded) {
+    # Get the last restart time
+    $lastRestartTime = GetLastRestartTime
+
+    # Restart the service if needed and not restarted since last DoS event
+    if ($restartNeeded -and $lastDosEventTime -and (!$lastRestartTime -or $lastDosEventTime -gt $lastRestartTime)) {
         $restartTime = Get-Date
         $restartTimeString = $restartTime.ToString("yyyy-MM-dd HH:mm:ss")
         
@@ -80,15 +94,15 @@ if (Test-Path $logFilePath) {
                       "Restart time: $restartTimeString"
         LogEvent -message $logMessage
     } else {
-        # Log that no restart was needed
+        # Log that no restart was needed or service was already restarted
         $checkEndTime = Get-Date
         $checkEndTimeString = $checkEndTime.ToString("yyyy-MM-dd HH:mm:ss")
-        $logMessage = "Check completed. No restart needed. " +
+        $logMessage = "Check completed. No restart needed or service already restarted since last DoS event. " +
                       "Checked file: $logFilePath. " +
                       "Check started at: $checkStartTimeString. " +
                       "Check ended at: $checkEndTimeString"
         LogEvent -message $logMessage
-        Write-Output "Less than 100 consecutive matching lines found. No action taken."
+        Write-Output "No action taken. Either less than 100 consecutive matching lines found or service already restarted since last DoS event."
     }
 } else {
     # Log that the file was not found
