@@ -5,3 +5,6 @@ SetLocalAdminAccount.log
 SetSrvAdminsGroup.log
 telegram_mail_bot/.env
 telegram_mail_bot/venv/*
+telegram_mail_bot/Pictures/*
+telegram_mail_bot/mail_bot.log
+telegram_mail_bot/processed_emails.txt
