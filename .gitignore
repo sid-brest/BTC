@@ -3,3 +3,5 @@ _computers.txt
 SetLocalAdminsGroup.log
 SetLocalAdminAccount.log
 SetSrvAdminsGroup.log
+telegram_mail_bot/.env
+telegram_mail_bot/venv/*
