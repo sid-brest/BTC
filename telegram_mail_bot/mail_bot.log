@@ -1,3 +1,198 @@
 2024-10-08 11:35:20,046 - INFO - Проверка отправленной почты завершена
 2024-10-08 11:36:20,058 - INFO - Начало проверки отправленной почты
 2024-10-08 11:36:26,217 - INFO - Проверка отправленной почты завершена
+2024-10-08 11:37:26,229 - INFO - Начало проверки отправленной почты
+2024-10-08 11:37:32,099 - INFO - Проверка отправленной почты завершена
+2024-10-08 11:38:32,112 - INFO - Начало проверки отправленной почты
+2024-10-08 11:38:40,267 - INFO - Обработка письма: Re: [Ticket#2024100810000359] Удаление истории
+2024-10-08 11:38:40,269 - INFO - Сохранено изображение: image.png
+2024-10-08 11:38:40,618 - INFO - Отправлено изображение в Telegram: image.png
+2024-10-08 11:38:40,619 - INFO - Сохранено изображение: image-1.png
+2024-10-08 11:38:40,763 - INFO - Отправлено изображение в Telegram: image-1.png
+2024-10-08 11:38:40,766 - INFO - Сохранено изображение: image-2.png
+2024-10-08 11:38:41,008 - INFO - Отправлено изображение в Telegram: image-2.png
+2024-10-08 11:38:41,011 - INFO - Сохранено изображение: image-3.png
+2024-10-08 11:38:41,257 - INFO - Отправлено изображение в Telegram: image-3.png
+2024-10-08 11:38:42,672 - INFO - Обработка письма: 1
+2024-10-08 11:38:42,687 - INFO - Сохранено изображение: Screenshot_3.jpg
+2024-10-08 11:38:44,247 - INFO - Отправлено изображение в Telegram: Screenshot_3.jpg
+2024-10-08 11:38:44,477 - INFO - Проверка отправленной почты завершена
+2024-10-08 11:39:44,490 - INFO - Начало проверки отправленной почты
+2024-10-08 11:39:52,470 - INFO - Проверка отправленной почты завершена
+2024-10-08 11:40:52,483 - INFO - Начало проверки отправленной почты
+2024-10-08 11:40:59,747 - INFO - Обработка письма: 12
+2024-10-08 11:40:59,749 - INFO - Сохранено изображение: 123123123.png
+2024-10-08 11:41:00,128 - INFO - Отправлено изображение в Telegram: 123123123.png
+2024-10-08 11:41:00,339 - INFO - Проверка отправленной почты завершена
+2024-10-08 11:42:00,351 - INFO - Начало проверки отправленной почты
+2024-10-08 11:42:08,126 - INFO - Проверка отправленной почты завершена
+2024-10-08 11:43:09,510 - INFO - Бот запущен
+2024-10-08 11:44:09,523 - INFO - Начало проверки отправленной почты
+2024-10-08 11:44:17,102 - INFO - Проверка отправленной почты завершена
+2024-10-08 11:45:17,115 - INFO - Начало проверки отправленной почты
+2024-10-08 11:45:25,507 - INFO - Обработка письма: Re: [Ticket#2024100810000359] Удаление истории
+2024-10-08 11:45:25,509 - INFO - Сохранено изображение: image.png
+2024-10-08 11:45:26,097 - ERROR - Ошибка при проверке почты: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: chat not found
+Traceback (most recent call last):
+  File "/home/admin107/BTC/telegram_mail_bot/bot.py", line 70, in fetch_emails
+    bot.send_photo(CHAT_ID, photo, caption=f"Тема: {msg.subject}")
+  File "/home/admin107/BTC/telegram_mail_bot/venv/lib/python3.12/site-packages/telebot/__init__.py", line 2259, in send_photo
+    apihelper.send_photo(
+  File "/home/admin107/BTC/telegram_mail_bot/venv/lib/python3.12/site-packages/telebot/apihelper.py", line 527, in send_photo
+    return _make_request(token, method_url, params=payload, files=files, method='post')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/admin107/BTC/telegram_mail_bot/venv/lib/python3.12/site-packages/telebot/apihelper.py", line 168, in _make_request
+    json_result = _check_result(method_name, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/admin107/BTC/telegram_mail_bot/venv/lib/python3.12/site-packages/telebot/apihelper.py", line 195, in _check_result
+    raise ApiTelegramException(method_name, result, result_json)
+telebot.apihelper.ApiTelegramException: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: chat not found
+2024-10-08 11:46:26,115 - INFO - Начало проверки отправленной почты
+2024-10-08 11:46:35,005 - INFO - Обработка письма: Re: [Ticket#2024100810000359] Удаление истории
+2024-10-08 11:46:35,007 - INFO - Сохранено изображение: image.png
+2024-10-08 11:46:35,465 - ERROR - Ошибка при проверке почты: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: chat not found
+Traceback (most recent call last):
+  File "/home/admin107/BTC/telegram_mail_bot/bot.py", line 70, in fetch_emails
+    bot.send_photo(CHAT_ID, photo, caption=f"Тема: {msg.subject}")
+  File "/home/admin107/BTC/telegram_mail_bot/venv/lib/python3.12/site-packages/telebot/__init__.py", line 2259, in send_photo
+    apihelper.send_photo(
+  File "/home/admin107/BTC/telegram_mail_bot/venv/lib/python3.12/site-packages/telebot/apihelper.py", line 527, in send_photo
+    return _make_request(token, method_url, params=payload, files=files, method='post')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/admin107/BTC/telegram_mail_bot/venv/lib/python3.12/site-packages/telebot/apihelper.py", line 168, in _make_request
+    json_result = _check_result(method_name, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/admin107/BTC/telegram_mail_bot/venv/lib/python3.12/site-packages/telebot/apihelper.py", line 195, in _check_result
+    raise ApiTelegramException(method_name, result, result_json)
+telebot.apihelper.ApiTelegramException: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: chat not found
+2024-10-08 11:47:35,479 - INFO - Начало проверки отправленной почты
+2024-10-08 11:47:43,653 - INFO - Обработка письма: Re: [Ticket#2024100810000359] Удаление истории
+2024-10-08 11:47:43,654 - INFO - Сохранено изображение: image.png
+2024-10-08 11:47:44,114 - ERROR - Ошибка при проверке почты: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: chat not found
+Traceback (most recent call last):
+  File "/home/admin107/BTC/telegram_mail_bot/bot.py", line 70, in fetch_emails
+    bot.send_photo(CHAT_ID, photo, caption=f"Тема: {msg.subject}")
+  File "/home/admin107/BTC/telegram_mail_bot/venv/lib/python3.12/site-packages/telebot/__init__.py", line 2259, in send_photo
+    apihelper.send_photo(
+  File "/home/admin107/BTC/telegram_mail_bot/venv/lib/python3.12/site-packages/telebot/apihelper.py", line 527, in send_photo
+    return _make_request(token, method_url, params=payload, files=files, method='post')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/admin107/BTC/telegram_mail_bot/venv/lib/python3.12/site-packages/telebot/apihelper.py", line 168, in _make_request
+    json_result = _check_result(method_name, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/admin107/BTC/telegram_mail_bot/venv/lib/python3.12/site-packages/telebot/apihelper.py", line 195, in _check_result
+    raise ApiTelegramException(method_name, result, result_json)
+telebot.apihelper.ApiTelegramException: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: chat not found
+2024-10-08 11:48:44,128 - INFO - Начало проверки отправленной почты
+2024-10-08 11:48:52,521 - INFO - Обработка письма: Re: [Ticket#2024100810000359] Удаление истории
+2024-10-08 11:48:52,523 - INFO - Сохранено изображение: image.png
+2024-10-08 11:48:52,976 - ERROR - Ошибка при проверке почты: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: chat not found
+Traceback (most recent call last):
+  File "/home/admin107/BTC/telegram_mail_bot/bot.py", line 70, in fetch_emails
+    bot.send_photo(CHAT_ID, photo, caption=f"Тема: {msg.subject}")
+  File "/home/admin107/BTC/telegram_mail_bot/venv/lib/python3.12/site-packages/telebot/__init__.py", line 2259, in send_photo
+    apihelper.send_photo(
+  File "/home/admin107/BTC/telegram_mail_bot/venv/lib/python3.12/site-packages/telebot/apihelper.py", line 527, in send_photo
+    return _make_request(token, method_url, params=payload, files=files, method='post')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/admin107/BTC/telegram_mail_bot/venv/lib/python3.12/site-packages/telebot/apihelper.py", line 168, in _make_request
+    json_result = _check_result(method_name, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/admin107/BTC/telegram_mail_bot/venv/lib/python3.12/site-packages/telebot/apihelper.py", line 195, in _check_result
+    raise ApiTelegramException(method_name, result, result_json)
+telebot.apihelper.ApiTelegramException: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: chat not found
+2024-10-08 11:49:52,991 - INFO - Начало проверки отправленной почты
+2024-10-08 11:50:00,175 - INFO - Обработка письма: Re: [Ticket#2024100810000359] Удаление истории
+2024-10-08 11:50:00,176 - INFO - Сохранено изображение: image.png
+2024-10-08 11:50:00,850 - ERROR - Ошибка при проверке почты: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: chat not found
+Traceback (most recent call last):
+  File "/home/admin107/BTC/telegram_mail_bot/bot.py", line 70, in fetch_emails
+    bot.send_photo(CHAT_ID, photo, caption=f"Тема: {msg.subject}")
+  File "/home/admin107/BTC/telegram_mail_bot/venv/lib/python3.12/site-packages/telebot/__init__.py", line 2259, in send_photo
+    apihelper.send_photo(
+  File "/home/admin107/BTC/telegram_mail_bot/venv/lib/python3.12/site-packages/telebot/apihelper.py", line 527, in send_photo
+    return _make_request(token, method_url, params=payload, files=files, method='post')
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/admin107/BTC/telegram_mail_bot/venv/lib/python3.12/site-packages/telebot/apihelper.py", line 168, in _make_request
+    json_result = _check_result(method_name, result)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/admin107/BTC/telegram_mail_bot/venv/lib/python3.12/site-packages/telebot/apihelper.py", line 195, in _check_result
+    raise ApiTelegramException(method_name, result, result_json)
+telebot.apihelper.ApiTelegramException: A request to the Telegram API was unsuccessful. Error code: 400. Description: Bad Request: chat not found
+2024-10-08 11:50:09,396 - INFO - Бот запущен
+2024-10-08 11:51:09,409 - INFO - Начало проверки отправленной почты
+2024-10-08 11:51:20,633 - INFO - Обработка письма: Re: [Ticket#2024100810000359] Удаление истории
+2024-10-08 11:51:20,634 - INFO - Сохранено изображение: image.png
+2024-10-08 11:51:21,014 - INFO - Отправлено изображение в Telegram: image.png
+2024-10-08 11:51:21,016 - INFO - Сохранено изображение: image-1.png
+2024-10-08 11:51:21,120 - INFO - Отправлено изображение в Telegram: image-1.png
+2024-10-08 11:51:21,124 - INFO - Сохранено изображение: image-2.png
+2024-10-08 11:51:21,350 - INFO - Отправлено изображение в Telegram: image-2.png
+2024-10-08 11:51:21,355 - INFO - Сохранено изображение: image-3.png
+2024-10-08 11:51:21,575 - INFO - Отправлено изображение в Telegram: image-3.png
+2024-10-08 11:51:22,583 - INFO - Обработка письма: 123123
+2024-10-08 11:51:22,596 - INFO - Сохранено изображение: 2024-09-27_153241.jpg
+2024-10-08 11:51:23,812 - INFO - Отправлено изображение в Telegram: 2024-09-27_153241.jpg
+2024-10-08 11:51:24,052 - INFO - Проверка отправленной почты завершена
+2024-10-08 11:52:08,576 - INFO - Бот запущен
+2024-10-08 11:53:08,590 - INFO - Начало проверки отправленной почты
+2024-10-08 11:53:18,386 - INFO - Проверка отправленной почты завершена
+2024-10-08 11:54:18,398 - INFO - Начало проверки отправленной почты
+2024-10-08 11:54:28,102 - INFO - Проверка отправленной почты завершена
+2024-10-08 11:55:28,115 - INFO - Начало проверки отправленной почты
+2024-10-08 11:55:38,327 - INFO - Проверка отправленной почты завершена
+2024-10-08 11:56:38,340 - INFO - Начало проверки отправленной почты
+2024-10-08 11:56:49,104 - INFO - Проверка отправленной почты завершена
+2024-10-08 12:05:05,181 - INFO - Бот запущен
+2024-10-08 12:05:14,429 - INFO - Бот запущен
+2024-10-08 12:05:45,342 - INFO - Бот запущен
+2024-10-08 12:06:45,356 - INFO - Начало проверки отправленной почты
+2024-10-08 12:06:50,438 - INFO - Обработка письма: Удаление истории
+2024-10-08 12:06:50,440 - INFO - Сохранено изображение: image.png
+2024-10-08 12:06:51,347 - INFO - Отправлено изображение в Telegram: image.png
+2024-10-08 12:06:51,348 - INFO - Сохранено изображение: image.png
+2024-10-08 12:06:51,547 - INFO - Отправлено изображение в Telegram: image.png
+2024-10-08 12:06:51,552 - INFO - Сохранено изображение: image.png
+2024-10-08 12:06:52,088 - INFO - Отправлено изображение в Telegram: image.png
+2024-10-08 12:06:52,091 - INFO - Сохранено изображение: image.png
+2024-10-08 12:06:52,697 - INFO - Отправлено изображение в Telegram: image.png
+2024-10-08 12:06:53,021 - INFO - Обработка письма: test
+2024-10-08 12:06:53,022 - INFO - Сохранено изображение: Подп.jpg
+2024-10-08 12:06:53,265 - INFO - Отправлено изображение в Telegram: Подп.jpg
+2024-10-08 12:06:53,653 - INFO - Обработка письма: 111
+2024-10-08 12:06:53,656 - INFO - Сохранено изображение: Screenshot_2.jpg
+2024-10-08 12:06:54,291 - INFO - Отправлено изображение в Telegram: Screenshot_2.jpg
+2024-10-08 12:06:55,246 - INFO - Обработка письма: 2222
+2024-10-08 12:06:55,257 - INFO - Сохранено изображение: Screenshot_1.jpg
+2024-10-08 12:06:56,739 - INFO - Отправлено изображение в Telegram: Screenshot_1.jpg
+2024-10-08 12:06:57,299 - INFO - Обработка письма: Re: [Ticket#2024100810000359] Удаление истории
+2024-10-08 12:06:57,301 - INFO - Сохранено изображение: image.png
+2024-10-08 12:06:57,633 - INFO - Отправлено изображение в Telegram: image.png
+2024-10-08 12:06:57,635 - INFO - Сохранено изображение: image-1.png
+2024-10-08 12:06:57,811 - INFO - Отправлено изображение в Telegram: image-1.png
+2024-10-08 12:06:57,814 - INFO - Сохранено изображение: image-2.png
+2024-10-08 12:06:58,301 - INFO - Отправлено изображение в Telegram: image-2.png
+2024-10-08 12:06:58,306 - INFO - Сохранено изображение: image-3.png
+2024-10-08 12:06:58,634 - INFO - Отправлено изображение в Telegram: image-3.png
+2024-10-08 12:06:59,511 - INFO - Обработка письма: 1
+2024-10-08 12:06:59,526 - INFO - Сохранено изображение: Screenshot_3.jpg
+2024-10-08 12:07:01,010 - INFO - Отправлено изображение в Telegram: Screenshot_3.jpg
+2024-10-08 12:07:01,328 - INFO - Обработка письма: 12
+2024-10-08 12:07:01,330 - INFO - Сохранено изображение: 123123123.png
+2024-10-08 12:07:01,492 - INFO - Отправлено изображение в Telegram: 123123123.png
+2024-10-08 12:07:02,022 - INFO - Обработка письма: Re: [Ticket#2024100810000359] Удаление истории
+2024-10-08 12:07:02,023 - INFO - Сохранено изображение: image.png
+2024-10-08 12:07:02,305 - INFO - Отправлено изображение в Telegram: image.png
+2024-10-08 12:07:02,307 - INFO - Сохранено изображение: image-1.png
+2024-10-08 12:07:02,513 - INFO - Отправлено изображение в Telegram: image-1.png
+2024-10-08 12:07:02,518 - INFO - Сохранено изображение: image-2.png
+2024-10-08 12:07:03,216 - INFO - Отправлено изображение в Telegram: image-2.png
+2024-10-08 12:07:03,221 - INFO - Сохранено изображение: image-3.png
+2024-10-08 12:07:03,674 - INFO - Отправлено изображение в Telegram: image-3.png
+2024-10-08 12:07:04,617 - INFO - Обработка письма: 123123
+2024-10-08 12:07:04,631 - INFO - Сохранено изображение: 2024-09-27_153241.jpg
+2024-10-08 12:07:06,018 - INFO - Отправлено изображение в Telegram: 2024-09-27_153241.jpg
+2024-10-08 12:07:06,240 - INFO - Проверка отправленной почты завершена
+2024-10-08 12:08:06,253 - INFO - Начало проверки отправленной почты
+2024-10-08 12:08:15,952 - INFO - Проверка отправленной почты завершена
+2024-10-08 12:09:15,965 - INFO - Начало проверки отправленной почты

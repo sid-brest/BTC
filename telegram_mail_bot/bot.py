@@ -6,6 +6,8 @@ import schedule
 import time
 from imap_tools import MailBox, A
 from datetime import datetime, timedelta
+import sqlite3
+import threading
 
 # Загрузка переменных окружения из файла .env
 load_dotenv()
@@ -17,7 +19,6 @@ PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 # Настройки для Telegram бота
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -31,29 +32,57 @@ PICTURES_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Pict
 if not os.path.exists(PICTURES_FOLDER):
     os.makedirs(PICTURES_FOLDER)
 
-# Создание файла для хранения обработанных ID писем
-PROCESSED_EMAILS_FILE = 'processed_emails.txt'
+# Инициализация базы данных
+def init_db():
+    conn = sqlite3.connect('mail_bot.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS processed_emails
+                 (email_id TEXT PRIMARY KEY)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS authorized_chats
+                 (chat_id INTEGER PRIMARY KEY)''')
+    conn.commit()
+    conn.close()
 
-def get_processed_emails():
-    if os.path.exists(PROCESSED_EMAILS_FILE):
-        with open(PROCESSED_EMAILS_FILE, 'r', encoding='utf-8') as f:
-            return set(f.read().splitlines())
-    return set()
+# Функции для работы с базой данных
+def is_email_processed(email_id):
+    conn = sqlite3.connect('mail_bot.db')
+    c = conn.cursor()
+    c.execute("SELECT 1 FROM processed_emails WHERE email_id = ?", (email_id,))
+    result = c.fetchone() is not None
+    conn.close()
+    return result
 
 def add_processed_email(email_id):
-    with open(PROCESSED_EMAILS_FILE, 'a', encoding='utf-8') as f:
-        f.write(f"{email_id}\n")
+    conn = sqlite3.connect('mail_bot.db')
+    c = conn.cursor()
+    c.execute("INSERT INTO processed_emails (email_id) VALUES (?)", (email_id,))
+    conn.commit()
+    conn.close()
+
+def get_authorized_chats():
+    conn = sqlite3.connect('mail_bot.db')
+    c = conn.cursor()
+    c.execute("SELECT chat_id FROM authorized_chats")
+    chats = [row[0] for row in c.fetchall()]
+    conn.close()
+    return chats
+
+def add_authorized_chat(chat_id):
+    conn = sqlite3.connect('mail_bot.db')
+    c = conn.cursor()
+    c.execute("INSERT OR IGNORE INTO authorized_chats (chat_id) VALUES (?)", (chat_id,))
+    conn.commit()
+    conn.close()
 
 def fetch_emails():
     logging.info("Начало проверки отправленной почты")
-    processed_emails = get_processed_emails()
 
     try:
         with MailBox(IMAP_SERVER).login(EMAIL, PASSWORD) as mailbox:
             mailbox.folder.set('[Gmail]/Отправленные')
-            one_minute_ago = datetime.now() - timedelta(minutes=1)
-            for msg in mailbox.fetch(A(date_gte=one_minute_ago.date())):
-                if msg.uid in processed_emails:
+            one_hour_ago = datetime.now() - timedelta(hours=1)
+            for msg in mailbox.fetch(A(date_gte=one_hour_ago.date())):
+                if is_email_processed(msg.uid):
                     continue
 
                 logging.info(f"Обработка письма: {msg.subject}")
@@ -66,8 +95,9 @@ def fetch_emails():
                         
                         logging.info(f"Сохранено изображение: {att.filename}")
                         
-                        with open(filepath, "rb") as photo:
-                            bot.send_photo(CHAT_ID, photo, caption=f"Тема: {msg.subject}")
+                        for chat_id in get_authorized_chats():
+                            with open(filepath, "rb") as photo:
+                                bot.send_photo(chat_id, photo, caption=f"Тема: {msg.subject}")
                         
                         logging.info(f"Отправлено изображение в Telegram: {att.filename}")
 
@@ -80,11 +110,20 @@ def fetch_emails():
 def scheduled_check():
     fetch_emails()
 
+# Обработчик команды /start
+@bot.message_handler(commands=['start'])
+def handle_start(message):
+    add_authorized_chat(message.chat.id)
+    bot.reply_to(message, "Чат авторизован для получения уведомлений.")
+
 # Настройка расписания проверки почты каждую минуту
 schedule.every(1).minutes.do(scheduled_check)
 
 def run_bot():
     logging.info("Бот запущен")
+    init_db()
+    bot_thread = threading.Thread(target=bot.polling, args=(None, True))
+    bot_thread.start()
     while True:
         try:
             schedule.run_pending()
