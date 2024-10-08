@@ -19,6 +19,7 @@ PASSWORD = os.getenv("EMAIL_PASSWORD")
 
 # Настройки для Telegram бота
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+ALLOWED_USERS = os.getenv("ALLOWED_USERS", "").split(",")
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -38,8 +39,21 @@ def init_db():
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS processed_emails
                  (email_id TEXT PRIMARY KEY)''')
-    c.execute('''CREATE TABLE IF NOT EXISTS authorized_chats
-                 (chat_id INTEGER PRIMARY KEY)''')
+    
+    # Проверяем, существует ли таблица authorized_chats
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='authorized_chats'")
+    if c.fetchone() is None:
+        # Если таблица не существует, создаем ее с новой структурой
+        c.execute('''CREATE TABLE authorized_chats
+                     (chat_id INTEGER PRIMARY KEY, username TEXT)''')
+    else:
+        # Если таблица существует, проверяем наличие столбца username
+        c.execute("PRAGMA table_info(authorized_chats)")
+        columns = [col[1] for col in c.fetchall()]
+        if 'username' not in columns:
+            # Если столбца username нет, добавляем его
+            c.execute("ALTER TABLE authorized_chats ADD COLUMN username TEXT")
+    
     conn.commit()
     conn.close()
 
@@ -67,12 +81,22 @@ def get_authorized_chats():
     conn.close()
     return chats
 
-def add_authorized_chat(chat_id):
+def add_authorized_chat(chat_id, username):
     conn = sqlite3.connect('mail_bot.db')
     c = conn.cursor()
-    c.execute("INSERT OR IGNORE INTO authorized_chats (chat_id) VALUES (?)", (chat_id,))
+    c.execute("INSERT OR REPLACE INTO authorized_chats (chat_id, username) VALUES (?, ?)", (chat_id, username))
     conn.commit()
     conn.close()
+
+def remove_authorized_chat(chat_id):
+    conn = sqlite3.connect('mail_bot.db')
+    c = conn.cursor()
+    c.execute("DELETE FROM authorized_chats WHERE chat_id = ?", (chat_id,))
+    conn.commit()
+    conn.close()
+
+def is_user_allowed(username):
+    return username in ALLOWED_USERS
 
 def fetch_emails():
     logging.info("Начало проверки отправленной почты")
@@ -113,8 +137,18 @@ def scheduled_check():
 # Обработчик команды /start
 @bot.message_handler(commands=['start'])
 def handle_start(message):
-    add_authorized_chat(message.chat.id)
-    bot.reply_to(message, "Чат авторизован для получения уведомлений.")
+    username = f"@{message.from_user.username}" if message.from_user.username else None
+    if is_user_allowed(username):
+        add_authorized_chat(message.chat.id, username)
+        bot.reply_to(message, "Вы успешно подписались на получение уведомлений.")
+    else:
+        bot.reply_to(message, "Извините, у вас нет разрешения на использование этого бота.")
+
+# Обработчик команды /stop
+@bot.message_handler(commands=['stop'])
+def handle_stop(message):
+    remove_authorized_chat(message.chat.id)
+    bot.reply_to(message, "Вы успешно отписались от получения уведомлений.")
 
 # Настройка расписания проверки почты каждую минуту
 schedule.every(1).minutes.do(scheduled_check)
