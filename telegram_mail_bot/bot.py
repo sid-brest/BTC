@@ -155,19 +155,26 @@ def scheduled_check():
 
 @bot.message_handler(commands=['start'])
 def handle_start(message):
-    # Handle /start command
     username = f"@{message.from_user.username}" if message.from_user.username else None
     if is_user_allowed(username):
         add_authorized_chat(message.chat.id, username)
-        bot.reply_to(message, "Вы успешно подписались на получение уведомлений.")
+        bot.reply_to(message, "You have successfully subscribed to notifications.")
+        logging.info(f"User {username} (chat_id: {message.chat.id}) subscribed to notifications")
     else:
-        bot.reply_to(message, "Извините, у Вас нет разрешения на использование этого бота.")
+        bot.reply_to(message, "Sorry, you don't have permission to use this bot.")
+        logging.warning(f"Unauthorized subscription attempt by user {username} (chat_id: {message.chat.id})")
 
 @bot.message_handler(commands=['stop'])
 def handle_stop(message):
-    # Handle /stop command
     remove_authorized_chat(message.chat.id)
-    bot.reply_to(message, "Вы успешно отписались от получения уведомлений.")
+    bot.reply_to(message, "You have successfully unsubscribed from notifications.")
+    username = f"@{message.from_user.username}" if message.from_user.username else None
+    logging.info(f"User {username} (chat_id: {message.chat.id}) unsubscribed from notifications")
+
+@bot.message_handler(func=lambda message: True)
+def log_all_messages(message):
+    username = f"@{message.from_user.username}" if message.from_user.username else None
+    logging.info(f"Received message from user {username} (chat_id: {message.chat.id}): {message.text}")
 
 # Schedule email check every minute
 schedule.every(1).minutes.do(scheduled_check)
