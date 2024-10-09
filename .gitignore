@@ -5,3 +5,4 @@ SetLocalAdminAccount.log
 SetSrvAdminsGroup.log
 telegram_mail_bot/*
 !telegram_mail_bot/bot.py
+!telegram_mail_bot/readme.md
