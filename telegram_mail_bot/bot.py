@@ -158,16 +158,16 @@ def handle_start(message):
     username = f"@{message.from_user.username}" if message.from_user.username else None
     if is_user_allowed(username):
         add_authorized_chat(message.chat.id, username)
-        bot.reply_to(message, "You have successfully subscribed to notifications.")
+        bot.reply_to(message, "Вы успешно подписались на уведомления.")
         logging.info(f"User {username} (chat_id: {message.chat.id}) subscribed to notifications")
     else:
-        bot.reply_to(message, "Sorry, you don't have permission to use this bot.")
+        bot.reply_to(message, "К сожалению, у Вас нет разрешения на использования этого бота.")
         logging.warning(f"Unauthorized subscription attempt by user {username} (chat_id: {message.chat.id})")
 
 @bot.message_handler(commands=['stop'])
 def handle_stop(message):
     remove_authorized_chat(message.chat.id)
-    bot.reply_to(message, "You have successfully unsubscribed from notifications.")
+    bot.reply_to(message, "Вы отписались от получения уведомлений.")
     username = f"@{message.from_user.username}" if message.from_user.username else None
     logging.info(f"User {username} (chat_id: {message.chat.id}) unsubscribed from notifications")
 
