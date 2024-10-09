@@ -1,10 +1,3 @@
-# Create .env file in the same directory with bot.by file
-# Fill .env file will content:
-# EMAIL=youremailthere@gmail.com
-# EMAIL_PASSWORD=strongpassword
-# TELEGRAM_BOT_TOKEN=123456789:QWEEFHKFJFJJKLJKJFHHSF
-# ALLOWED_USERS=@telegramuser1,@telegramuser2
-
 import os
 import telebot # type: ignore
 from dotenv import load_dotenv # type: ignore
@@ -43,38 +36,20 @@ if not os.path.exists(PICTURES_FOLDER):
 
 # Initialize database
 def init_db():
-    """
-    Initialize the SQLite database and create necessary tables if they don't exist.
-    """
     conn = sqlite3.connect('mail_bot.db')
     c = conn.cursor()
     
-    # Create table for processed emails
     c.execute('''CREATE TABLE IF NOT EXISTS processed_emails
                  (email_id TEXT PRIMARY KEY)''')
     
-    # Create or update table for authorized chats
-    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='authorized_chats'")
-    if c.fetchone() is None:
-        c.execute('''CREATE TABLE authorized_chats
-                     (chat_id INTEGER PRIMARY KEY, username TEXT, is_active INTEGER DEFAULT 1)''')
-    else:
-        # Add new columns if they don't exist
-        c.execute("PRAGMA table_info(authorized_chats)")
-        columns = [col[1] for col in c.fetchall()]
-        if 'username' not in columns:
-            c.execute("ALTER TABLE authorized_chats ADD COLUMN username TEXT")
-        if 'is_active' not in columns:
-            c.execute("ALTER TABLE authorized_chats ADD COLUMN is_active INTEGER DEFAULT 1")
+    c.execute('''CREATE TABLE IF NOT EXISTS authorized_chats
+                 (chat_id INTEGER PRIMARY KEY, username TEXT, is_active INTEGER DEFAULT 0)''')
     
     conn.commit()
     conn.close()
 
 # Database functions
 def is_email_processed(email_id):
-    """
-    Check if an email has already been processed.
-    """
     conn = sqlite3.connect('mail_bot.db')
     c = conn.cursor()
     c.execute("SELECT 1 FROM processed_emails WHERE email_id = ?", (email_id,))
@@ -83,9 +58,6 @@ def is_email_processed(email_id):
     return result
 
 def add_processed_email(email_id):
-    """
-    Mark an email as processed in the database.
-    """
     conn = sqlite3.connect('mail_bot.db')
     c = conn.cursor()
     c.execute("INSERT INTO processed_emails (email_id) VALUES (?)", (email_id,))
@@ -93,9 +65,6 @@ def add_processed_email(email_id):
     conn.close()
 
 def get_authorized_chats():
-    """
-    Get a list of active authorized chat IDs.
-    """
     conn = sqlite3.connect('mail_bot.db')
     c = conn.cursor()
     c.execute("SELECT chat_id FROM authorized_chats WHERE is_active = 1")
@@ -103,62 +72,40 @@ def get_authorized_chats():
     conn.close()
     return chats
 
-def add_authorized_chat(chat_id, username):
-    """
-    Add or update an authorized chat in the database.
-    """
+def add_or_update_chat(chat_id, username, is_active):
     conn = sqlite3.connect('mail_bot.db')
     c = conn.cursor()
-    c.execute("INSERT OR REPLACE INTO authorized_chats (chat_id, username, is_active) VALUES (?, ?, 1)", (chat_id, username))
+    c.execute("INSERT OR REPLACE INTO authorized_chats (chat_id, username, is_active) VALUES (?, ?, ?)", 
+              (chat_id, username, is_active))
     conn.commit()
     conn.close()
 
 def is_user_allowed(username):
-    """
-    Check if a user is in the list of allowed users.
-    """
     return username in ALLOWED_USERS
 
 def update_authorized_chats():
-    """
-    Update the authorized_chats table based on the current ALLOWED_USERS list.
-    """
     conn = sqlite3.connect('mail_bot.db')
     c = conn.cursor()
     
-    # Get all users from the authorized_chats table
     c.execute("SELECT chat_id, username, is_active FROM authorized_chats")
     db_users = c.fetchall()
     
-    # Create a set of allowed usernames from the .env file
     allowed_usernames = set(ALLOWED_USERS)
     
     for chat_id, username, is_active in db_users:
         if username in allowed_usernames:
-            # User is in ALLOWED_USERS, activate them
             if not is_active:
                 c.execute("UPDATE authorized_chats SET is_active = 1 WHERE chat_id = ?", (chat_id,))
-                logging.info(f"Reactivated user {username} (chat_id: {chat_id}) as they are now in ALLOWED_USERS")
+                logging.info(f"Reactivated user {username} (chat_id: {chat_id})")
         else:
-            # User is not in ALLOWED_USERS, deactivate them
             if is_active:
                 c.execute("UPDATE authorized_chats SET is_active = 0 WHERE chat_id = ?", (chat_id,))
-                logging.info(f"Deactivated user {username} (chat_id: {chat_id}) as they are no longer in ALLOWED_USERS")
-    
-    # Add any new users from ALLOWED_USERS that are not in the database
-    for username in allowed_usernames:
-        c.execute("SELECT 1 FROM authorized_chats WHERE username = ?", (username,))
-        if c.fetchone() is None:
-            c.execute("INSERT INTO authorized_chats (username, is_active) VALUES (?, 1)", (username,))
-            logging.info(f"Added new user {username} to authorized_chats as they are in ALLOWED_USERS")
+                logging.info(f"Deactivated user {username} (chat_id: {chat_id})")
     
     conn.commit()
     conn.close()
 
 def fetch_emails():
-    """
-    Fetch and process new emails from the Gmail sent folder.
-    """
     logging.info("Starting to check sent mail")
 
     try:
@@ -180,10 +127,16 @@ def fetch_emails():
                         logging.info(f"Saved image: {att.filename}")
                         
                         for chat_id in get_authorized_chats():
-                            with open(filepath, "rb") as photo:
-                                bot.send_photo(chat_id, photo, caption=f"Subject: {msg.subject}")
-                        
-                        logging.info(f"Sent image to Telegram: {att.filename}")
+                            try:
+                                with open(filepath, "rb") as photo:
+                                    bot.send_photo(chat_id, photo, caption=f"Subject: {msg.subject}")
+                                logging.info(f"Sent image to Telegram: {att.filename} (chat_id: {chat_id})")
+                            except telebot.apihelper.ApiTelegramException as e:
+                                if e.error_code == 400 and "chat not found" in e.description:
+                                    logging.warning(f"Chat not found for chat_id: {chat_id}. Deactivating in database.")
+                                    add_or_update_chat(chat_id, None, 0)
+                                else:
+                                    logging.error(f"Error sending image to chat_id {chat_id}: {str(e)}")
 
                 add_processed_email(msg.uid)
 
@@ -192,58 +145,39 @@ def fetch_emails():
         logging.error(f"Error while checking mail: {str(e)}", exc_info=True)
 
 def scheduled_check():
-    """
-    Perform scheduled tasks: update authorized chats and fetch emails.
-    """
     update_authorized_chats()
     fetch_emails()
 
 @bot.message_handler(commands=['start'])
 def handle_start(message):
-    """
-    Handle the /start command for the Telegram bot.
-    """
     username = f"@{message.from_user.username}" if message.from_user.username else None
     if is_user_allowed(username):
-        add_authorized_chat(message.chat.id, username)
+        add_or_update_chat(message.chat.id, username, 1)
         bot.reply_to(message, "Вы успешно подписались на уведомления.")
         logging.info(f"User {username} (chat_id: {message.chat.id}) subscribed to notifications")
     else:
+        add_or_update_chat(message.chat.id, username, 0)
         bot.reply_to(message, "К сожалению, у Вас нет разрешения на использование этого бота.")
         logging.warning(f"Unauthorized subscription attempt by user {username} (chat_id: {message.chat.id})")
 
 @bot.message_handler(commands=['stop'])
 def handle_stop(message):
-    """
-    Handle the /stop command for the Telegram bot.
-    """
-    conn = sqlite3.connect('mail_bot.db')
-    c = conn.cursor()
-    c.execute("UPDATE authorized_chats SET is_active = 0 WHERE chat_id = ?", (message.chat.id,))
-    conn.commit()
-    conn.close()
-    bot.reply_to(message, "Вы отписались от получения уведомлений.")
     username = f"@{message.from_user.username}" if message.from_user.username else None
+    add_or_update_chat(message.chat.id, username, 0)
+    bot.reply_to(message, "Вы отписались от получения уведомлений.")
     logging.info(f"User {username} (chat_id: {message.chat.id}) unsubscribed from notifications")
 
 @bot.message_handler(func=lambda message: True)
 def log_all_messages(message):
-    """
-    Log all messages received by the bot.
-    """
     username = f"@{message.from_user.username}" if message.from_user.username else None
     logging.info(f"Received message from user {username} (chat_id: {message.chat.id}): {message.text}")
 
-# Schedule the check to run every minute
 schedule.every(1).minutes.do(scheduled_check)
 
 def run_bot():
-    """
-    Main function to run the bot.
-    """
     logging.info("Bot started")
     init_db()
-    update_authorized_chats()  # Update authorized chats on startup
+    update_authorized_chats()
     bot_thread = threading.Thread(target=bot.polling, args=(None, True))
     bot_thread.start()
     while True:
