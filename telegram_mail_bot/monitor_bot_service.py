@@ -42,10 +42,20 @@ def get_last_log_time():
 def restart_service():
     """Restart the service."""
     try:
-        subprocess.run(['sudo', 'systemctl', 'restart', SERVICE_NAME], check=True)
+        # Check if the service exists
+        subprocess.run(['systemctl', 'status', SERVICE_NAME], check=True, capture_output=True)
+        
+        # Try restarting without sudo first
+        try:
+            subprocess.run(['systemctl', 'restart', SERVICE_NAME], check=True)
+        except subprocess.CalledProcessError:
+            # If that fails, try with sudo
+            subprocess.run(['sudo', 'systemctl', 'restart', SERVICE_NAME], check=True)
+        
         logging.info(f"Restarted {SERVICE_NAME}")
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to restart {SERVICE_NAME}: {e}")
+        logging.error(f"Service status: {e.output.decode() if e.output else 'No output'}")
 
 def main():
     logging.info("Monitor script started")
