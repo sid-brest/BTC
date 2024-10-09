@@ -150,5 +150,23 @@ journalctl -u telegram-mail-bot-monitor.service
 ```
 ## Logs
 The script generates logs in telegram-mail-bot-monitor.log in the same directory as the script.
-Note
+## Note
 Ensure that the user running this script has the necessary permissions to restart the service and access the log files.
+# Database Management
+The script uses an SQLite database named mail_bot.db. Here are some common operations:
+To enter the SQLite3 command-line interface for the database:
+```bash
+sqlite3 mail_bot.db
+```
+Once in the SQLite3 interface, to delete the most recent row from the authorized_chats table:
+```sql
+DELETE FROM authorized_chats WHERE chat_id = (SELECT MAX(chat_id) FROM authorized_chats);
+```
+You may also delete the row with given chat_id in authorized_chats table
+```sql
+DELETE FROM authorized_chats WHERE chat_id = 121313151;
+```
+To exit the SQLite3 interface:
+```sql
+.quit
+```
