@@ -1,3 +1,10 @@
+# Create .env file in the same directory with bot.by file
+# Fill .env file will content:
+# EMAIL=youremailthere@gmail.com
+# EMAIL_PASSWORD=strongpassword
+# TELEGRAM_BOT_TOKEN=123456789:QWEEFHKFJFJJKLJKJFHHSF
+# ALLOWED_USERS=@telegramuser1,@telegramuser2
+
 import os
 import telebot # type: ignore
 from dotenv import load_dotenv # type: ignore
