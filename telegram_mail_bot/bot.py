@@ -189,8 +189,8 @@ def fetch_emails():
                                 else:
                                     logging.error(f"Error sending image to chat_id {chat_id}: {str(e)}")
 
-                if has_image_attachment:
-                    add_processed_email(msg.uid)
+                # Mark email as processed regardless of whether it has image attachments
+                add_processed_email(msg.uid)
 
         logging.info("Finished checking sent mail")
     except Exception as e:
