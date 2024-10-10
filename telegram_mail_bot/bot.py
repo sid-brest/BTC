@@ -17,6 +17,7 @@ load_dotenv()
 IMAP_SERVER = "imap.gmail.com"
 EMAIL = os.getenv("EMAIL")
 PASSWORD = os.getenv("EMAIL_PASSWORD")
+TO_EMAIL = os.getenv("TOEMAIL")  # New variable for the specified email address
 
 # Telegram bot settings
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -157,20 +158,29 @@ def fetch_emails():
                 if is_email_processed(msg.uid):
                     continue
 
+                # Check if the specified email address is in the "To" field
+                if TO_EMAIL not in msg.to:
+                    continue
+
                 logging.info(f"Processing email: {msg.subject}")
 
+                has_image_attachment = False
                 for att in msg.attachments:
                     if att.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
+                        has_image_attachment = True
                         filepath = os.path.join(PICTURES_FOLDER, att.filename)
                         with open(filepath, "wb") as f:
                             f.write(att.payload)
                         
                         logging.info(f"Saved image: {att.filename}")
                         
+                        # Format the sent date
+                        sent_date = msg.date.strftime("%Y-%m-%d %H:%M:%S")
+                        
                         for chat_id in get_authorized_chats():
                             try:
                                 with open(filepath, "rb") as photo:
-                                    bot.send_photo(chat_id, photo, caption=f"Subject: {msg.subject}")
+                                    bot.send_photo(chat_id, photo, caption=f"Изображение отправлено: {sent_date}")
                                 logging.info(f"Sent image to Telegram: {att.filename} (chat_id: {chat_id})")
                             except telebot.apihelper.ApiTelegramException as e:
                                 if e.error_code == 400 and "chat not found" in e.description:
@@ -179,7 +189,8 @@ def fetch_emails():
                                 else:
                                     logging.error(f"Error sending image to chat_id {chat_id}: {str(e)}")
 
-                add_processed_email(msg.uid)
+                if has_image_attachment:
+                    add_processed_email(msg.uid)
 
         logging.info("Finished checking sent mail")
     except Exception as e:
