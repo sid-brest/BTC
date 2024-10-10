@@ -29,6 +29,7 @@ EMAIL=youremailthere@gmail.com
 EMAIL_PASSWORD=strongpassword
 TELEGRAM_BOT_TOKEN=123456789:QWEEFHKFJFJJKLJKJFHHSF
 ALLOWED_USERS=@telegramuser1,@telegramuser2
+TOEMAIL=toemailaddress@gmail.com
 ```
 Make it secure:
 ```bash
