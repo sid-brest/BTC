@@ -3,6 +3,7 @@ _computers.txt
 SetLocalAdminsGroup.log
 SetLocalAdminAccount.log
 SetSrvAdminsGroup.log
+install_apps/*
 telegram_mail_bot/*
 !telegram_mail_bot/bot.py
 !telegram_mail_bot/monitor_bot_service.py

@@ -13,7 +13,7 @@ $scriptBlock = {
 }
 
 # Invoke the script block on the specified remote computer and capture the output
-$result = Invoke-Command -ComputerName "computername123" -ScriptBlock $scriptBlock
+$result = Invoke-Command -ComputerName "LuntsevichM1" -ScriptBlock $scriptBlock
 
 # Display the captured output
 $result
