@@ -122,24 +122,20 @@ def is_user_allowed(username):
 def update_authorized_chats():
     """
     Update the authorized chats in the database based on the ALLOWED_USERS list.
+    Only adds new users, doesn't change status of existing users.
     """
     conn = sqlite3.connect('mail_bot.db')
     c = conn.cursor()
     
-    c.execute("SELECT chat_id, username, is_active FROM authorized_chats")
-    db_users = c.fetchall()
+    c.execute("SELECT username FROM authorized_chats")
+    db_usernames = set(row[0] for row in c.fetchall())
     
     allowed_usernames = set(ALLOWED_USERS)
     
-    for chat_id, username, is_active in db_users:
-        if username in allowed_usernames:
-            if not is_active:
-                c.execute("UPDATE authorized_chats SET is_active = 1 WHERE chat_id = ?", (chat_id,))
-                logging.info(f"Reactivated user {username} (chat_id: {chat_id})")
-        else:
-            if is_active:
-                c.execute("UPDATE authorized_chats SET is_active = 0 WHERE chat_id = ?", (chat_id,))
-                logging.info(f"Deactivated user {username} (chat_id: {chat_id})")
+    for username in allowed_usernames:
+        if username not in db_usernames:
+            c.execute("INSERT INTO authorized_chats (username, is_active) VALUES (?, 1)", (username,))
+            logging.info(f"Added new allowed user {username} to database")
     
     conn.commit()
     conn.close()
@@ -210,11 +206,15 @@ def handle_start(message):
     """
     username = f"@{message.from_user.username}" if message.from_user.username else None
     if is_user_allowed(username):
-        add_or_update_chat(message.chat.id, username, 1)
+        conn = sqlite3.connect('mail_bot.db')
+        c = conn.cursor()
+        c.execute("INSERT OR REPLACE INTO authorized_chats (chat_id, username, is_active) VALUES (?, ?, 1)", 
+                  (message.chat.id, username))
+        conn.commit()
+        conn.close()
         bot.reply_to(message, "Вы успешно подписались на уведомления.")
         logging.info(f"User {username} (chat_id: {message.chat.id}) subscribed to notifications")
     else:
-        add_or_update_chat(message.chat.id, username, 0)
         bot.reply_to(message, "К сожалению, у Вас нет разрешения на использование этого бота.")
         logging.warning(f"Unauthorized subscription attempt by user {username} (chat_id: {message.chat.id})")
 
@@ -224,7 +224,11 @@ def handle_stop(message):
     Handle the /stop command for the Telegram bot.
     """
     username = f"@{message.from_user.username}" if message.from_user.username else None
-    add_or_update_chat(message.chat.id, username, 0)
+    conn = sqlite3.connect('mail_bot.db')
+    c = conn.cursor()
+    c.execute("UPDATE authorized_chats SET is_active = 0 WHERE chat_id = ?", (message.chat.id,))
+    conn.commit()
+    conn.close()
     bot.reply_to(message, "Вы отписались от получения уведомлений.")
     logging.info(f"User {username} (chat_id: {message.chat.id}) unsubscribed from notifications")
 
