@@ -5,9 +5,8 @@ SetLocalAdminAccount.log
 SetSrvAdminsGroup.log
 install_apps/*
 telegram_mail_bot/*
-!telegram_mail_bot/bot.py
-!telegram_mail_bot/monitor_bot_service.py
-!telegram_mail_bot/readme.md
+!telegram_mail_bot/*.py
+!telegram_mail_bot/*.md
 trucks_csv_clean/*
-!trucks_csv_clean/autoclean.py
-!trucks_csv_clean/readme.md
+!trucks_csv_clean/*.py
+!trucks_csv_clean/*.md
