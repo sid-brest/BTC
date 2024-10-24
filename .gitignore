@@ -11,6 +11,6 @@ trucks_csv_clean/*
 !trucks_csv_clean/*.py
 !trucks_csv_clean/*.md
 parking_time_tracker/*
-!parking_time_tracker/csvdata/*
-!parking_time_tracker/xlsdata/*
+!parking_time_tracker/csvdata/*.csv
+!parking_time_tracker/xlsdata/*.xlsx
 !parking_time_tracker/venv_parking_time_tracker/*
