@@ -122,7 +122,7 @@ def is_user_allowed(username):
 def update_authorized_chats():
     """
     Update the authorized chats in the database based on the ALLOWED_USERS list.
-    Remove users not in ALLOWED_USERS and add new users from ALLOWED_USERS.
+    Only removes users that are no longer in ALLOWED_USERS.
     """
     conn = sqlite3.connect('mail_bot.db')
     c = conn.cursor()
@@ -136,14 +136,6 @@ def update_authorized_chats():
         if username not in ALLOWED_USERS:
             c.execute("DELETE FROM authorized_chats WHERE username = ?", (username,))
             logging.info(f"Removed unauthorized user {username} from database")
-    
-    # Add or update users from ALLOWED_USERS
-    for username in ALLOWED_USERS:
-        if username not in db_users:
-            # Insert new user with NULL chat_id (will be updated when they first interact with bot)
-            c.execute("INSERT OR IGNORE INTO authorized_chats (username, is_active) VALUES (?, 1)", 
-                     (username,))
-            logging.info(f"Added new allowed user {username} to database")
     
     conn.commit()
     conn.close()
@@ -211,11 +203,36 @@ def scheduled_check():
 def handle_start(message):
     """
     Handle the /start command for the Telegram bot.
+    Adds new users to the database only when they interact with the bot.
     """
     username = f"@{message.from_user.username}" if message.from_user.username else None
+    
+    if not username:
+        bot.reply_to(message, "Для использования бота необходимо иметь username в Telegram.")
+        logging.warning(f"User without username attempted to start bot (chat_id: {message.chat.id})")
+        return
+    
     if is_user_allowed(username):
-        add_or_update_chat(message.chat.id, username, 1)
-        bot.reply_to(message, "Вы успешно подписались на уведомления.")
+        conn = sqlite3.connect('mail_bot.db')
+        c = conn.cursor()
+        
+        # Check if user already exists
+        c.execute("SELECT chat_id, is_active FROM authorized_chats WHERE username = ?", (username,))
+        existing_user = c.fetchone()
+        
+        if existing_user:
+            # Update existing user's chat_id and activate
+            c.execute("UPDATE authorized_chats SET chat_id = ?, is_active = 1 WHERE username = ?",
+                     (message.chat.id, username))
+            bot.reply_to(message, "Вы успешно переподключились к боту.")
+        else:
+            # Add new user
+            c.execute("INSERT INTO authorized_chats (chat_id, username, is_active) VALUES (?, ?, 1)",
+                     (message.chat.id, username))
+            bot.reply_to(message, "Вы успешно подписались на уведомления.")
+        
+        conn.commit()
+        conn.close()
         logging.info(f"User {username} (chat_id: {message.chat.id}) subscribed to notifications")
     else:
         bot.reply_to(message, "К сожалению, у Вас нет разрешения на использование этого бота.")
