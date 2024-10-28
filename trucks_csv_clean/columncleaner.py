@@ -2,11 +2,23 @@ import csv
 import re
 import os
 
+def russian_to_latin(text):
+    # Словарь для замены русских букв на латинские аналоги
+    rus_to_lat = {
+        'А': 'A', 'В': 'B', 'Е': 'E', 'К': 'K', 'М': 'M', 'Н': 'H',
+        'О': 'O', 'Р': 'P', 'С': 'C', 'Т': 'T', 'У': 'Y', 'Х': 'X',
+        'а': 'a', 'в': 'b', 'е': 'e', 'к': 'k', 'м': 'm', 'н': 'h',
+        'о': 'o', 'р': 'p', 'с': 'c', 'т': 't', 'у': 'y', 'х': 'x'
+    }
+    return ''.join(rus_to_lat.get(char, char) for char in text)
+
 def process_value(value):
     # Удаляем информацию в скобках вместе со скобками
     value = re.sub(r'\([^)]*\)', '', value)
     # Удаляем все символы, кроме букв, цифр и подчеркиваний
     value = re.sub(r'[^\w]', '', value)
+    # Заменяем русские буквы на латинские
+    value = russian_to_latin(value)
     return value
 
 def process_csv(input_file):
