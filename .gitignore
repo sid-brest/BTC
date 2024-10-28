@@ -10,6 +10,7 @@ telegram_mail_bot/*
 csv_file_processor/*
 !csv_file_processor/*.py
 !csv_file_processor/*.md
+!csv_file_processor/*.js
 parking_time_tracker/csvdata/*.csv
 parking_time_tracker/xlsdata/*.xlsx
 parking_time_tracker/venv_parking_time_tracker/*
