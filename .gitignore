@@ -7,9 +7,9 @@ install_apps/*
 telegram_mail_bot/*
 !telegram_mail_bot/*.py
 !telegram_mail_bot/*.md
-trucks_csv_clean/*
-!trucks_csv_clean/*.py
-!trucks_csv_clean/*.md
+csv_file_processor/*
+!csv_file_processor/*.py
+!csv_file_processor/*.md
 parking_time_tracker/csvdata/*.csv
 parking_time_tracker/xlsdata/*.xlsx
 parking_time_tracker/venv_parking_time_tracker/*
