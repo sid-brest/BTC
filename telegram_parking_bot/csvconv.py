@@ -51,7 +51,16 @@ for file in csv_files:
         else:
             monthly_dfs[month_key] = df
 
-# Сохраняем файлы по месяцам
+# Сохраняем файлы по месяцам с сортировкой
 for month_key, df in monthly_dfs.items():
+    # Преобразуем столбец "Время мом. снимка" в datetime для корректной сортировки
+    df['Время мом. снимка'] = pd.to_datetime(df['Время мом. снимка'])
+    
+    # Сортируем сначала по номерному знаку, затем по времени
+    df_sorted = df.sort_values(['Номерной знак', 'Время мом. снимка'])
+    
+    # Преобразуем обратно в строку для сохранения
+    df_sorted['Время мом. снимка'] = df_sorted['Время мом. снимка'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    
     output_filename = f'./csvbymonth/data_{month_key}.csv'
-    df.to_csv(output_filename, index=False, encoding='utf-8')
+    df_sorted.to_csv(output_filename, index=False, encoding='utf-8-sig')
