@@ -27,7 +27,7 @@ ALLOWED_USERS = os.getenv("ALLOWED_USERS", "").split(",")
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # Configure logging
-logging.basicConfig(filename='mail_bot.log', level=logging.INFO, 
+logging.basicConfig(filename='parking_bot.log', level=logging.INFO, 
                     format='%(asctime)s - %(levelname)s - %(message)s',
                     encoding='utf-8')
 
@@ -41,7 +41,7 @@ def init_db():
     """
     Initialize the SQLite database and create necessary tables if they don't exist.
     """
-    conn = sqlite3.connect('mail_bot.db')
+    conn = sqlite3.connect('parking_bot.db')
     c = conn.cursor()
     
     # Create table for storing processed email IDs
@@ -63,7 +63,7 @@ def is_email_processed(email_id):
     :param email_id: The unique identifier of the email
     :return: True if the email has been processed, False otherwise
     """
-    conn = sqlite3.connect('mail_bot.db')
+    conn = sqlite3.connect('parking_bot.db')
     c = conn.cursor()
     c.execute("SELECT 1 FROM processed_emails WHERE email_id = ?", (email_id,))
     result = c.fetchone() is not None
@@ -76,7 +76,7 @@ def add_processed_email(email_id):
     
     :param email_id: The unique identifier of the email
     """
-    conn = sqlite3.connect('mail_bot.db')
+    conn = sqlite3.connect('parking_bot.db')
     c = conn.cursor()
     c.execute("INSERT INTO processed_emails (email_id) VALUES (?)", (email_id,))
     conn.commit()
@@ -88,7 +88,7 @@ def get_authorized_chats():
     
     :return: A list of active chat IDs
     """
-    conn = sqlite3.connect('mail_bot.db')
+    conn = sqlite3.connect('parking_bot.db')
     c = conn.cursor()
     c.execute("SELECT chat_id FROM authorized_chats WHERE is_active = 1")
     chats = [row[0] for row in c.fetchall()]
@@ -103,7 +103,7 @@ def add_or_update_chat(chat_id, username, is_active):
     :param username: The username associated with the chat
     :param is_active: Boolean indicating whether the chat is active
     """
-    conn = sqlite3.connect('mail_bot.db')
+    conn = sqlite3.connect('parking_bot.db')
     c = conn.cursor()
     c.execute("INSERT OR REPLACE INTO authorized_chats (chat_id, username, is_active) VALUES (?, ?, ?)", 
               (chat_id, username, is_active))
@@ -124,7 +124,7 @@ def update_authorized_chats():
     Update the authorized chats in the database based on the ALLOWED_USERS list.
     Only removes users that are no longer in ALLOWED_USERS.
     """
-    conn = sqlite3.connect('mail_bot.db')
+    conn = sqlite3.connect('parking_bot.db')
     c = conn.cursor()
     
     # Get current users from database
@@ -213,7 +213,7 @@ def handle_start(message):
         return
     
     if is_user_allowed(username):
-        conn = sqlite3.connect('mail_bot.db')
+        conn = sqlite3.connect('parking_bot.db')
         c = conn.cursor()
         
         # Check if user already exists

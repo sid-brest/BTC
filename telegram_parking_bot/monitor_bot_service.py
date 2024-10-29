@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO,
                     filename=LOG_FILE)
 
 # Path to the log file we're monitoring
-MAIL_BOT_LOG_FILE = os.path.join(SCRIPT_DIR, 'mail_bot.log')
+parking_bot_LOG_FILE = os.path.join(SCRIPT_DIR, 'parking_bot.log')
 
 # The name of the service we're monitoring
 SERVICE_NAME = 'telegram-mail-bot.service'
@@ -34,9 +34,9 @@ def get_service_start_time():
 def get_last_log_time():
     """Get the timestamp of the last log entry."""
     try:
-        return os.path.getmtime(MAIL_BOT_LOG_FILE)
+        return os.path.getmtime(parking_bot_LOG_FILE)
     except FileNotFoundError:
-        logging.error(f"Log file not found: {MAIL_BOT_LOG_FILE}")
+        logging.error(f"Log file not found: {parking_bot_LOG_FILE}")
         return None
 
 def restart_service():
