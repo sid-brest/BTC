@@ -97,14 +97,40 @@ def process_csv(input_file):
     # Process the first column in the deduplicated DataFrame
     df_no_dupes[first_col] = df_no_dupes[first_col].apply(process_value)
     
+    # Get the directory of the current script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    additional_file = os.path.join(script_dir, 'addnumbers.csv')
+    
+    try:
+        # Read additional rows from addnumbers.csv
+        additional_df = pd.read_csv(additional_file, encoding='utf-8-sig')
+        
+        # Ensure additional_df has the same columns as main DataFrame
+        if list(additional_df.columns) != list(df_no_dupes.columns):
+            print("\nWarning: Columns in addnumbers.csv do not match the main file.")
+            print(f"Main file columns: {list(df_no_dupes.columns)}")
+            print(f"addnumbers.csv columns: {list(additional_df.columns)}")
+            raise ValueError("Column mismatch")
+        
+        # Concatenate the main DataFrame with additional rows
+        final_df = pd.concat([df_no_dupes, additional_df], ignore_index=True)
+        
+    except FileNotFoundError:
+        print("\nWarning: addnumbers.csv not found in script directory")
+        print(f"Expected path: {additional_file}")
+        final_df = df_no_dupes
+    except Exception as e:
+        print(f"\nError processing addnumbers.csv: {str(e)}")
+        final_df = df_no_dupes
+    
     # Create output filename by adding '_modified' before extension
     base_name, ext = os.path.splitext(input_file)
     output_file = f"{base_name}_modified{ext}"
     
     # Save processed DataFrame to new CSV file
     # Use UTF-8 BOM encoding, quote all fields, and add comma+newline as terminator
-    df_no_dupes.to_csv(output_file, index=False, encoding='utf-8-sig', 
-                       quoting=csv.QUOTE_ALL, lineterminator=',\n')
+    final_df.to_csv(output_file, index=False, encoding='utf-8-sig', 
+                    quoting=csv.QUOTE_ALL, lineterminator=',\n')
     
     print(f"\nProcessed file saved as: {output_file}")
 
