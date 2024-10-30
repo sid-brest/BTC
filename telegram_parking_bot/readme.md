@@ -1,173 +1,194 @@
-This script is a Telegram bot that monitors a Gmail account's sent folder for new emails with image attachments and forwards them to authorized Telegram users.
-# Setting Up Mail Bot on Ubuntu Server
-## 1. Create a Virtual Environment
-Navigate to your project directory:
-```bash
-cd /path/to/your/project
-```
-Create a virtual environment:
-```bash
-python3 -m venv venv
-```
-Activate the virtual environment:
-```bash
-source venv/bin/activate
-```
-## 2. Install Required Modules
-Install all necessary modules:
-```bash
-pip install python-dotenv pyTelegramBotAPI schedule imap_tools tenacity threading sqlite3 telebot
-```
-## 3. Set Up the .env File
-Create a .env file in the same directory as the bot.py file:
-```bash
-touch .env
-```
-Fill the .env file with the following content:
-```bash
-EMAIL=youremailthere@gmail.com
-EMAIL_PASSWORD=strongpassword
-TELEGRAM_BOT_TOKEN=123456789:QWEEFHKFJFJJKLJKJFHHSF
-ALLOWED_USERS=@telegramuser1,@telegramuser2
-TOEMAIL=toemailaddress@gmail.com
-```
-Make it secure:
-```bash
-chmod 600 .env
-```
-## 4. Run the Script as a Service on Ubuntu
-Create a systemd service file:
-```bash
-sudo nano /etc/systemd/system/telegram-mail-bot.service 
-```
-Add the following content to the service file:
-```bash
-[Unit]
-Description=Mail Bot Service
-After=network.target
+# Vehicle Tracking Data Processor
 
-[Service]
-ExecStart=/path/to/your/venv/bin/python /path/to/your/bot.py
-WorkingDirectory=/path/to/your/project
-User=your_username
-Group=your_group
-Restart=always
+This script processes vehicle tracking data from CSV files, calculates time intervals between checkpoints, and uploads the results to Google Sheets.
 
-[Install]
-WantedBy=multi-user.target
-```
-Save and exit the editor.
-Reload systemd to recognize the new service:
+## Features
+
+- Downloads CSV attachments from Gmail accounts
+- Processes vehicle tracking data from multiple channels (CH01, CH02)
+- Calculates time intervals between checkpoint passages
+- Organizes data by month
+- Uploads processed data to Google Sheets
+- Tracks processed emails to avoid duplicates
+
+## Prerequisites
+
+1. Python 3.6+
+2. Google Cloud Project with Sheets API enabled
+3. Service Account credentials
+4. Gmail accounts with IMAP enabled
+
+## Required Python Packages
+
 ```bash
-sudo systemctl daemon-reload
+pip install pandas google-auth google-auth-oauthlib google-auth-httplib2 google-api-python-client python-dotenv numpy
 ```
-Start the service:
-```bash
-sudo systemctl start telegram-mail-bot.service
-```
-Enable the service to start on boot:
-```bash
-sudo systemctl enable telegram-mail-bot.service
-```
-Check the status of the service:
-```bash
-sudo systemctl status telegram-mail-bot.service
-```
-To view logs:
-```bash
-journalctl -u telegram-mail-bot.service
-```
-## 5. Usage
-Run the script:
-```bash
-systemctl start telegram-mail-bot.service
-```
-Start a chat with your Telegram bot and send the `/start` command to subscribe to notifications.
-The bot will check for new emails every minute and forward any image attachments to subscribed users.
-To stop receiving notifications, send the `/stop` command to the bot.
-## 6. Features
-- Monitors the Gmail sent folder for new emails
-- Saves image attachments locally
-- Forwards image attachments to authorized Telegram users
-- Manages user subscriptions using SQLite database
-- Logs activities for debugging and monitoring
-## 7. Notes
-- The script uses a SQLite database to store processed email IDs and authorized chat information.
-- Ensure that your Gmail account has sufficient storage space for saving attachments.
-- The bot will only process emails sent within the last hour to avoid duplicate processing.
-## 8. Troubleshooting
-If you encounter any issues, check the `mail_bot.log` file for error messages and debugging information.
-# Telegram Mail Bot Monitor Script
-This script monitors the activity of a Telegram mail bot service and restarts it if there's no log activity for 10 minutes.
+
 ## Setup
-Save the script `telegram_mail_bot_monitor.py` into the same directory with previous script file.
-Make the script executable:
-```bash
-chmod +x telegram_mail_bot_monitor.py
-```
-Ensure the `telegram-mail-bot.service` is properly configured in your system.
 
-Create a systemd service file:
+1. Create a .env file with the following variables:
+
 ```bash
-sudo nano /etc/systemd/system/telegram-mail-bot-monitor.service 
+EMAIL1=your_first_email@gmail.com
+EMAIL1_PASSWORD=your_first_email_app_password
+EMAIL2=your_second_email@gmail.com
+EMAIL2_PASSWORD=your_second_email_app_password
+SPREADSHEET_ID=your_google_sheets_id
 ```
 
-Add the following content to the service file:
-```bash
-[Unit]
-Description=Mail Bot Service
-After=network.target
+2. Place your Google Service Account key file as service-account-key.json in the project root
 
-[Service]
-ExecStart=/path/to/your/venv/bin/python /path/to/your/bot.py
-WorkingDirectory=/path/to/your/project
-User=your_username
-Group=your_group
-Restart=always
+3. Create required directories:
 
-[Install]
-WantedBy=multi-user.target
-```
-Save and exit the editor.
-Reload systemd to recognize the new service:
 ```bash
-sudo systemctl daemon-reload
+    ./csvdata - for temporary CSV storage
+    ./csvbymonth - for processed monthly data
 ```
-Start the service:
+
+## How It Works
+
+1. Email Processing
+    - Downloads CSV attachments from specified Gmail accounts
+    - Stores message IDs in SQLite database to prevent duplicate processing
+
+2. Data Processing
+    - Reads CSV files and identifies channels based on IP addresses
+    - Groups data by month
+    - Calculates time intervals between CH01 and CH02 passages
+
+3. Output Generation
+    - Creates monthly summary files in csvbymonth directory
+    - Generates two types of files:
+        - data_YYYY-MM.csv: Raw processed data
+        - intervals_YYYY-MM.csv: Calculated time intervals
+
+4. Google Sheets Integration
+    - Creates monthly sheets automatically
+    - Uploads interval calculations to corresponding sheets
+    - Names sheets in MM.YYYY format
+
+## Output Format
+
+The interval calculations include:
+
+- License plate number
+- Number of passages
+- Total time in days
+- Detailed passage information with timestamps
+
+## Error Handling
+
+- Creates necessary directories automatically
+- Skips previously processed emails
+- Handles missing or invalid data gracefully
+- Logs processing errors for troubleshooting
+
+## Usage
+
+Run the script using:
+
 ```bash
-sudo systemctl start telegram-mail-bot-monitor.service
+python script_name.py
 ```
-Enable the service to start on boot:
+## Maintenance
+
+- Regularly check the processed_emails.db size
+- Monitor Gmail storage usage
+- Verify Google Sheets API quota limits
+- Update service account credentials before expiration
+
+## Security Notes
+
+- Store credentials securely
+- Use app-specific passwords for Gmail
+- Restrict service account permissions appropriately
+- Never commit sensitive credentials to version control
+
+
+
+## Creating and Setting Up Google Service Account
+
+### 1. Create a Google Cloud Project
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/)
+2. Click on "New Project" in the top-right corner
+3. Enter a project name and click "Create"
+
+### 2. Enable the Google Sheets API
+
+1. In the Cloud Console, select your project
+2. Go to "APIs & Services" > "Library"
+3. Search for "Google Sheets API"
+4. Click "Enable"
+
+### 3. Create a Service Account
+
+1. Go to "APIs & Services" > "Credentials"
+2. Click "Create Credentials" > "Service Account"
+3. Fill in the service account details:
+   - Name: `vehicle-tracking-processor` (or your preferred name)
+   - Description: "Service account for vehicle tracking data processing"
+   - Click "Create"
+
+### 4. Generate the Service Account Key
+
+1. In the Service Accounts list, find your newly created service account
+2. Click the three dots menu (⋮) > "Manage keys"
+3. Click "Add Key" > "Create new key"
+4. Choose "JSON" format
+5. Click "Create"
+   - The key file will automatically download to your computer
+
+### 5. Set Up the Key File
+
+1. Rename the downloaded JSON file to `service-account-key.json`
+2. Place it in your project's root directory
+3. Your key file should look similar to this:
+```json
+{
+  "type": "service_account",
+  "project_id": "your-project-id",
+  "private_key_id": "key-id",
+  "private_key": "-----BEGIN PRIVATE KEY-----\n.....\n-----END PRIVATE KEY-----\n",
+  "client_email": "service-account-name@project-id.iam.gserviceaccount.com",
+  "client_id": "client-id",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/service-account..."
+}
+```
+### 6. Share Your Google Sheet
+
+1. Create a new Google Sheet or open an existing one
+2. Copy the Spreadsheet ID from the URL:
+        URL format: https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit
+3. Share the spreadsheet with the service account:
+4. Click "Share" button
+5. Add the service account email (found in client_email field of your JSON key)
+6. Give "Editor" access
+7. Click "Share"
+
+### 7. Update Environment Variables
+
+Add the Spreadsheet ID to your .env file:
 ```bash
-sudo systemctl enable telegram-mail-bot-monitor.service
+SPREADSHEET_ID=your_copied_spreadsheet_id
 ```
-Check the status of the service:
-```bash
-sudo systemctl status telegram-mail-bot-monitor.service
-```
-To view logs:
-```bash
-journalctl -u telegram-mail-bot-monitor.service
-```
-## Logs
-The script generates logs in telegram-mail-bot-monitor.log in the same directory as the script.
-## Note
-Ensure that the user running this script has the necessary permissions to restart the service and access the log files.
-# Database Management
-The script uses an SQLite database named mail_bot.db. Here are some common operations:
-To enter the SQLite3 command-line interface for the database:
-```bash
-sqlite3 mail_bot.db
-```
-Once in the SQLite3 interface, to delete the most recent row from the authorized_chats table:
-```sql
-DELETE FROM authorized_chats WHERE chat_id = (SELECT MAX(chat_id) FROM authorized_chats);
-```
-You may also delete the row with given chat_id in authorized_chats table
-```sql
-DELETE FROM authorized_chats WHERE chat_id = 121313151;
-```
-To exit the SQLite3 interface:
-```sql
-.quit
-```
+
+### Security Best Practices
+- Never commit the service-account-key.json to version control
+- Add service-account-key.json to your .gitignore file
+- Restrict the service account's permissions to only necessary APIs
+- Regularly rotate the service account key
+- Store the key file securely and limit access to authorized personnel only
+
+### Troubleshooting
+
+If you encounter authentication issues:
+
+- Verify the key file is correctly named and placed in the root directory
+- Ensure the Sheets API is enabled in your Google Cloud Project
+- Confirm the service account has editor access to the spreadsheet
+- Check that the SPREADSHEET_ID in your .env file matches your Google Sheet
+- Verify your Google Cloud Project is not disabled
