@@ -1,30 +1,51 @@
 # Import required libraries
-import os  # For operating system operations like file/directory handling
-import pandas as pd  # For data manipulation and analysis
-from datetime import datetime  # For date and time operations
-import re  # For regular expression operations
-import sqlite3  # For SQLite database operations
-import email  # For email handling
-import imaplib  # For IMAP email protocol operations
-import email.header  # For email header handling
-from email.header import decode_header  # For decoding email headers
-from dotenv import load_dotenv  # For loading environment variables
-import base64  # For base64 encoding/decoding
-from google.oauth2 import service_account  # For Google API authentication
-from googleapiclient.discovery import build  # For building Google API service
-import numpy as np  # For numerical operations
+import os
+import pandas as pd
+from datetime import datetime
+import re
+import sqlite3
+import email
+import imaplib
+import email.header
+from email.header import decode_header
+from dotenv import load_dotenv
+import base64
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+import numpy as np
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Create necessary directories if they don't exist
-os.makedirs('./csvdata', exist_ok=True)  # Directory for storing downloaded CSV files
-os.makedirs('./csvbymonth', exist_ok=True)  # Directory for storing processed monthly data
+os.makedirs('./csvdata', exist_ok=True)
+os.makedirs('./csvbymonth', exist_ok=True)
 
 # Google Sheets API configuration
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets']  # API scope for full access to Google Sheets
-SERVICE_ACCOUNT_FILE = 'service-account-key.json'  # Service account credentials file
-SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')  # Get spreadsheet ID from environment variables
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+SERVICE_ACCOUNT_FILE = 'service-account-key.json'
+SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
+
+def load_plate_mapping(mapping_file='plate_mapping.txt'):
+    """Load license plate mapping from file"""
+    mapping = {}
+    try:
+        with open(mapping_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if '=' in line:
+                    target, sources = line.split('=')
+                    target = target.strip()
+                    # Split sources by both comma and semicolon
+                    source_plates = [p.strip() for p in sources.replace(';', ',').split(',')]
+                    # Add mapping for each source plate
+                    for plate in source_plates:
+                        mapping[plate] = target
+                    # Also add mapping for the target plate to itself
+                    mapping[target] = target
+    except FileNotFoundError:
+        print(f"Warning: Mapping file {mapping_file} not found")
+    return mapping
 
 def initialize_sheets_api():
     """Initialize and return Google Sheets API service"""
@@ -34,23 +55,17 @@ def initialize_sheets_api():
     return service
 
 def get_or_create_sheet(service, sheet_name):
-    """
-    Check if a sheet exists in the spreadsheet, create it if it doesn't
-    Returns True if successful, False otherwise
-    """
+    """Check if a sheet exists in the spreadsheet, create it if it doesn't"""
     try:
-        # Get metadata of all sheets in the spreadsheet
         sheet_metadata = service.spreadsheets().get(spreadsheetId=SPREADSHEET_ID).execute()
         sheets = sheet_metadata.get('sheets', '')
         sheet_exists = False
         
-        # Check if sheet already exists
         for sheet in sheets:
             if sheet['properties']['title'] == sheet_name:
                 sheet_exists = True
                 break
                 
-        # Create new sheet if it doesn't exist
         if not sheet_exists:
             request_body = {
                 'requests': [{
@@ -74,7 +89,6 @@ def get_or_create_sheet(service, sheet_name):
 def update_sheet_data(service, sheet_name, data):
     """Update sheet with new data, clearing existing content first"""
     try:
-        # Convert DataFrame to list of lists and handle NaN values
         values = [data.columns.values.tolist()] + data.values.tolist()
         values = [['' if isinstance(x, float) and np.isnan(x) else x for x in row] for row in values]
         
@@ -82,14 +96,12 @@ def update_sheet_data(service, sheet_name, data):
             'values': values
         }
         
-        # Clear existing content
         range_name = f'{sheet_name}!A1:Z'
         service.spreadsheets().values().clear(
             spreadsheetId=SPREADSHEET_ID,
             range=range_name
         ).execute()
         
-        # Update with new data
         service.spreadsheets().values().update(
             spreadsheetId=SPREADSHEET_ID,
             range=f'{sheet_name}!A1',
@@ -131,12 +143,10 @@ def mark_email_processed(conn, message_id, subject, date, email_account):
 
 def download_attachments(email_account, password):
     """Download CSV attachments from Gmail sent folder"""
-    # Connect to Gmail using IMAP
     mail = imaplib.IMAP4_SSL('imap.gmail.com')
     mail.login(email_account, password)
     mail.select('"[Gmail]/Sent Mail"')
 
-    # Search for all emails
     result, messages = mail.search(None, 'ALL')
     
     if result != 'OK':
@@ -145,7 +155,6 @@ def download_attachments(email_account, password):
 
     conn = init_db()
 
-    # Process each email
     for num in messages[0].split():
         result, msg_data = mail.fetch(num, '(RFC822)')
         if result != 'OK':
@@ -155,11 +164,9 @@ def download_attachments(email_account, password):
         message = email.message_from_bytes(email_body)
         message_id = message['Message-ID']
 
-        # Skip if email already processed
         if is_email_processed(conn, message_id):
             continue
 
-        # Extract CSV attachments
         for part in message.walk():
             if part.get_content_maintype() == 'multipart':
                 continue
@@ -173,11 +180,9 @@ def download_attachments(email_account, password):
 
                 filepath = os.path.join('./csvdata', filename)
                 
-                # Save attachment
                 with open(filepath, 'wb') as f:
                     f.write(part.get_payload(decode=True))
                 
-                # Mark email as processed
                 mark_email_processed(conn, message_id, message['subject'],
                                   message['date'], email_account)
 
@@ -196,38 +201,55 @@ def get_channel(filename):
             return 'CH02'
     return 'Unknown'
 
-def calculate_time_intervals(df):
+def calculate_time_intervals(df, plate_mapping):
     """Calculate time intervals between CH01 and CH02 events for each vehicle"""
     results = []
-    for plate, group in df.groupby('Номерной знак'):
-        group = group.sort_values('Время мом. снимка')
-        events = group.to_dict('records')
-        i = 0
+    
+    # Create a copy of the dataframe and apply plate mapping
+    df = df.copy()
+    df['Original_Plate'] = df['Номерной знак']
+    df['Номерной знак'] = df['Номерной знак'].map(lambda x: plate_mapping.get(x, x))
+    
+    # Process each unique mapped plate
+    unique_plates = df['Номерной знак'].unique()
+    
+    for plate in unique_plates:
+        plate_data = df[df['Номерной знак'] == plate].sort_values('Время мом. снимка')
+        events = plate_data.to_dict('records')
+        
+        # Group events by CH01->CH02 sequence
         intervals = []
+        current_interval = None
         
-        # Calculate intervals between consecutive CH01 and CH02 events
-        while i < len(events) - 1:
-            if events[i]['Канал'] == 'CH01' and events[i + 1]['Канал'] == 'CH02':
-                time_diff = (events[i + 1]['Время мом. снимка'] - events[i]['Время мом. снимка']).total_seconds() / 60
-                intervals.append({
-                    'start_time': events[i]['Время мом. снимка'].strftime('%Y-%m-%d %H:%M:%S'),
-                    'end_time': events[i + 1]['Время мом. снимка'].strftime('%Y-%m-%d %H:%M:%S'),
-                    'interval': round(time_diff, 2)
-                })
-            i += 1
+        for event in events:
+            if event['Канал'] == 'CH01':
+                if current_interval is None:
+                    current_interval = {'start_time': event['Время мом. снимка']}
+            elif event['Канал'] == 'CH02' and current_interval is not None:
+                current_interval['end_time'] = event['Время мом. снимка']
+                time_diff = (current_interval['end_time'] - current_interval['start_time']).total_seconds() / 60
+                current_interval['interval'] = round(time_diff, 2)
+                intervals.append(current_interval)
+                current_interval = None
         
-        # Calculate summary statistics for each plate
         if intervals:
+            # Calculate total time in days
             total_minutes = sum(interval['interval'] for interval in intervals)
             total_days = round(total_minutes / 1440, 3)
+            
+            # Format intervals string
+            intervals_str = ', '.join([
+                f"({interval['start_time'].strftime('%Y-%m-%d %H:%M:%S')} -> "
+                f"{interval['end_time'].strftime('%Y-%m-%d %H:%M:%S')}: "
+                f"{interval['interval']} мин)"
+                for interval in intervals
+            ])
+            
             results.append({
                 'Номерной знак': plate,
                 'Количество проездов': len(intervals),
                 'Суммарное время (дни)': total_days,
-                'Детали проездов': ', '.join([
-                    f"({interval['start_time']} -> {interval['end_time']}: {interval['interval']} мин)"
-                    for interval in intervals
-                ])
+                'Детали проездов': intervals_str
             })
     
     return pd.DataFrame(results)
@@ -255,6 +277,9 @@ def upload_intervals_to_sheets():
 
 def main():
     """Main execution function"""
+    # Load plate mapping
+    plate_mapping = load_plate_mapping()
+    
     # Process emails from multiple accounts
     email_accounts = [
         (os.getenv('EMAIL1'), os.getenv('EMAIL1_PASSWORD')),
@@ -277,7 +302,6 @@ def main():
             file_date = datetime.strptime(date_match.group(1), '%Y-%m-%d')
             month_key = file_date.strftime('%Y-%m')
             
-            # Read and process CSV file
             df = pd.read_csv(f'./csvdata/{file}', encoding='utf-8')
             df = df[df['Номерной знак'] != 'Не лицензировано']
             
@@ -286,7 +310,6 @@ def main():
             
             df.insert(0, 'Канал', get_channel(file))
             
-            # Combine data by month
             if month_key in monthly_dfs:
                 monthly_dfs[month_key] = pd.concat([monthly_dfs[month_key], df], ignore_index=True)
             else:
@@ -303,8 +326,8 @@ def main():
         df_temp['Время мом. снимка'] = df_temp['Время мом. снимка'].dt.strftime('%Y-%m-%d %H:%M:%S')
         df_temp.to_csv(output_filename, index=False, encoding='utf-8-sig')
         
-        # Calculate and save intervals
-        intervals_df = calculate_time_intervals(df_sorted)
+        # Calculate and save intervals with plate mapping
+        intervals_df = calculate_time_intervals(df_sorted, plate_mapping)
         intervals_filename = f'./csvbymonth/intervals_{month_key}.csv'
         intervals_df.to_csv(intervals_filename, index=False, encoding='utf-8-sig')
 
@@ -313,6 +336,5 @@ def main():
     
     print("Processing completed. Check the csvbymonth folder and Google Sheets for results.")
 
-# Execute main function if script is run directly
 if __name__ == "__main__":
     main()
