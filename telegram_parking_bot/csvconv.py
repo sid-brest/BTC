@@ -26,6 +26,26 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 SERVICE_ACCOUNT_FILE = 'service-account-key.json'
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
 
+def format_time_interval(minutes):
+    """Format time interval in a user-friendly way"""
+    if minutes < 60:
+        return f"{round(minutes, 2)} мин"
+    elif minutes < 1440:  # less than a day
+        hours = int(minutes // 60)
+        mins = round(minutes % 60)
+        return f"{hours} ч. {mins} мин"
+    else:
+        days = int(minutes // 1440)
+        remaining_minutes = minutes % 1440
+        hours = int(remaining_minutes // 60)
+        mins = round(remaining_minutes % 60)
+        return f"{days} д. {hours} ч. {mins} мин"
+
+def format_total_time(days):
+    """Format total time from days to a user-friendly string"""
+    total_minutes = days * 1440
+    return format_time_interval(total_minutes)
+
 def load_plate_mapping(mapping_file='plate_mapping.txt'):
     """Load license plate mapping from file"""
     mapping = {}
@@ -36,12 +56,9 @@ def load_plate_mapping(mapping_file='plate_mapping.txt'):
                 if '=' in line:
                     target, sources = line.split('=')
                     target = target.strip()
-                    # Split sources by both comma and semicolon
                     source_plates = [p.strip() for p in sources.replace(';', ',').split(',')]
-                    # Add mapping for each source plate
                     for plate in source_plates:
                         mapping[plate] = target
-                    # Also add mapping for the target plate to itself
                     mapping[target] = target
     except FileNotFoundError:
         print(f"Warning: Mapping file {mapping_file} not found")
@@ -89,6 +106,11 @@ def get_or_create_sheet(service, sheet_name):
 def update_sheet_data(service, sheet_name, data):
     """Update sheet with new data, clearing existing content first"""
     try:
+        # Convert 'Суммарное время' from days to formatted string
+        if 'Суммарное время (дни)' in data.columns:
+            data['Суммарное время'] = data['Суммарное время (дни)'].apply(format_total_time)
+            data = data.drop('Суммарное время (дни)', axis=1)
+
         values = [data.columns.values.tolist()] + data.values.tolist()
         values = [['' if isinstance(x, float) and np.isnan(x) else x for x in row] for row in values]
         
@@ -205,19 +227,16 @@ def calculate_time_intervals(df, plate_mapping):
     """Calculate time intervals between CH01 and CH02 events for each vehicle"""
     results = []
     
-    # Create a copy of the dataframe and apply plate mapping
     df = df.copy()
     df['Original_Plate'] = df['Номерной знак']
     df['Номерной знак'] = df['Номерной знак'].map(lambda x: plate_mapping.get(x, x))
     
-    # Process each unique mapped plate
     unique_plates = df['Номерной знак'].unique()
     
     for plate in unique_plates:
         plate_data = df[df['Номерной знак'] == plate].sort_values('Время мом. снимка')
         events = plate_data.to_dict('records')
         
-        # Group events by CH01->CH02 sequence
         intervals = []
         current_interval = None
         
@@ -229,19 +248,18 @@ def calculate_time_intervals(df, plate_mapping):
                 current_interval['end_time'] = event['Время мом. снимка']
                 time_diff = (current_interval['end_time'] - current_interval['start_time']).total_seconds() / 60
                 current_interval['interval'] = round(time_diff, 2)
+                current_interval['formatted_interval'] = format_time_interval(time_diff)
                 intervals.append(current_interval)
                 current_interval = None
         
         if intervals:
-            # Calculate total time in days
             total_minutes = sum(interval['interval'] for interval in intervals)
             total_days = round(total_minutes / 1440, 3)
             
-            # Format intervals string
             intervals_str = ', '.join([
                 f"({interval['start_time'].strftime('%Y-%m-%d %H:%M:%S')} -> "
                 f"{interval['end_time'].strftime('%Y-%m-%d %H:%M:%S')}: "
-                f"{interval['interval']} мин)"
+                f"{interval['formatted_interval']})"
                 for interval in intervals
             ])
             
@@ -277,25 +295,20 @@ def upload_intervals_to_sheets():
 
 def main():
     """Main execution function"""
-    # Load plate mapping
     plate_mapping = load_plate_mapping()
     
-    # Process emails from multiple accounts
     email_accounts = [
         (os.getenv('EMAIL1'), os.getenv('EMAIL1_PASSWORD')),
         (os.getenv('EMAIL2'), os.getenv('EMAIL2_PASSWORD'))
     ]
 
-    # Download attachments from each email account
     for email_account, password in email_accounts:
         if email_account and password:
             download_attachments(email_account, password)
 
-    # Process downloaded CSV files
     csv_files = [f for f in os.listdir('./csvdata') if f.endswith('.CSV')]
     monthly_dfs = {}
 
-    # Group data by month
     for file in csv_files:
         date_match = re.search(r'(\d{4}-\d{2}-\d{2})', file)
         if date_match:
@@ -315,23 +328,19 @@ def main():
             else:
                 monthly_dfs[month_key] = df
 
-    # Process and save monthly data
     for month_key, df in monthly_dfs.items():
         df['Время мом. снимка'] = pd.to_datetime(df['Время мом. снимка'])
         df_sorted = df.sort_values(['Номерной знак', 'Время мом. снимка'])
         
-        # Save raw monthly data
         output_filename = f'./csvbymonth/data_{month_key}.csv'
         df_temp = df_sorted.copy()
         df_temp['Время мом. снимка'] = df_temp['Время мом. снимка'].dt.strftime('%Y-%m-%d %H:%M:%S')
         df_temp.to_csv(output_filename, index=False, encoding='utf-8-sig')
         
-        # Calculate and save intervals with plate mapping
         intervals_df = calculate_time_intervals(df_sorted, plate_mapping)
         intervals_filename = f'./csvbymonth/intervals_{month_key}.csv'
         intervals_df.to_csv(intervals_filename, index=False, encoding='utf-8-sig')
 
-    # Upload processed data to Google Sheets
     upload_intervals_to_sheets()
     
     print("Processing completed. Check the csvbymonth folder and Google Sheets for results.")
