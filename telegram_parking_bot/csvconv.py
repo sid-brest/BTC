@@ -27,18 +27,19 @@ SERVICE_ACCOUNT_FILE = 'service-account-key.json'
 SPREADSHEET_ID = os.getenv('SPREADSHEET_ID')
 
 def format_time_interval(minutes):
-    """Format time interval in a user-friendly way"""
+    """Format time interval in a user-friendly way with minutes rounded down"""
+    minutes = int(minutes)  # Round down to nearest integer
     if minutes < 60:
-        return f"{round(minutes, 2)} мин"
+        return f"{minutes} мин"
     elif minutes < 1440:  # less than a day
-        hours = int(minutes // 60)
-        mins = round(minutes % 60)
+        hours = minutes // 60
+        mins = minutes % 60
         return f"{hours} ч. {mins} мин"
     else:
-        days = int(minutes // 1440)
+        days = minutes // 1440
         remaining_minutes = minutes % 1440
-        hours = int(remaining_minutes // 60)
-        mins = round(remaining_minutes % 60)
+        hours = remaining_minutes // 60
+        mins = remaining_minutes % 60
         return f"{days} д. {hours} ч. {mins} мин"
 
 def format_total_time(days):
