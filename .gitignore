@@ -10,6 +10,8 @@ telegram_mail_bot/*
 telegram_parking_bot/*
 !telegram_parking_bot/*.py
 !telegram_parking_bot/*.md
+!telegram_parking_bot/*.gs
+!telegram_parking_bot/*.txt
 csv_file_processor/*
 !csv_file_processor/*.py
 !csv_file_processor/*.md
