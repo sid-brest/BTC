@@ -146,17 +146,21 @@ function timeStringToMinutes(timeStr) {
  * Форматирует время для отображения
  */
 function formatTime(minutes) {
-  if (minutes < 24 * 60) {
+  if (minutes >= 24 * 60) {
+    // Для времени от 24 часов округляем до целых дней в меньшую сторону
+    const days = Math.floor(minutes / (24 * 60));
+    return `${days} д.`;
+  } else if (minutes >= 60) {
+    // От часа до суток
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
+    if (remainingMinutes === 0) {
+      return `${hours} ч.`;
+    }
     return `${hours} ч. ${remainingMinutes} мин.`;
   } else {
-    const days = Math.floor(minutes / (24 * 60));
-    const remainingHours = Math.floor((minutes % (24 * 60)) / 60);
-    if (remainingHours > 0) {
-      return `${days} д. ${remainingHours} ч.`;
-    }
-    return `${days} д.`;
+    // Меньше часа
+    return `${minutes} мин.`;
   }
 }
 
