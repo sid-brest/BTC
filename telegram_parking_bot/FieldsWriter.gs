@@ -146,6 +146,9 @@ function timeStringToMinutes(timeStr) {
  * Форматирует время для отображения
  */
 function formatTime(minutes) {
+  if (minutes === 0) {
+    return '0';
+  }
   if (minutes >= 24 * 60) {
     // Для времени от 24 часов округляем до целых дней в меньшую сторону
     const days = Math.floor(minutes / (24 * 60));
@@ -185,9 +188,13 @@ function processSourceData(sourceData, referenceData, coefficientsData, dayRate,
       // Для времени от 24 часов берем только целые дни (округление в меньшую сторону)
       const days = Math.floor(timeInMinutes / (24 * 60));
       parkingCost = days * dayRate * coefficientValue;
-    } else if (timeInMinutes > 120) {
-      // От 2 до 24 часов - считаем все время по почасовой ставке
-      parkingCost = Math.ceil(timeInMinutes / 60) * hourlyRate * coefficientValue;
+    } else if (timeInMinutes > 180) {
+      // От 3 до 24 часов - считаем только целые часы
+      const hours = Math.floor(timeInMinutes / 60);
+      parkingCost = hours * hourlyRate * coefficientValue;
+    } else if (timeInMinutes > 120 && timeInMinutes <= 180) {
+      // От 2 до 3 часов - округляем до 2 часов и считаем по минутной ставке
+      parkingCost = 120 * minuteRate * coefficientValue;
     } else {
       // До 2 часов - минутная ставка
       parkingCost = timeInMinutes * minuteRate * coefficientValue;
