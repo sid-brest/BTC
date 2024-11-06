@@ -2,7 +2,6 @@
  * Создает ежедневный триггер для запуска в 07:05
  */
 function createDailyTrigger() {
-  // Удаляем существующие триггеры с тем же именем функции
   const triggers = ScriptApp.getProjectTriggers();
   triggers.forEach(trigger => {
     if (trigger.getHandlerFunction() === 'onChange') {
@@ -10,7 +9,6 @@ function createDailyTrigger() {
     }
   });
   
-  // Создаем новый ежедневный триггер
   ScriptApp.newTrigger('onChange')
       .timeBased()
       .atHour(7)
@@ -23,145 +21,188 @@ function createDailyTrigger() {
  * Создает пользовательское меню при открытии таблицы
  */
 function onOpen() {
-  const ui = SpreadsheetApp.getUi();
-  ui.createMenu('Действия')
+  SpreadsheetApp.getUi()
+      .createMenu('Действия')
       .addItem('Обновить данные', 'onChange')
       .addToUi();
 }
 
 /**
  * Обрабатывает изменения и обновляет данные между таблицами
- * @param {Object} e - Объект события
  */
 function onChange(e) {
   try {
-    // ID таблиц
-    const sourceSpreadsheetId = '1uDNsA4GpRXWP5xQNUCr0s7l0ZyyJ7hThnQ6VSF1OwTI';    // Исходная таблица
-    const targetSpreadsheetId = '1oyaxJgF5tiLkholgWkUhdY_BIPFaP1cmKh-RJ2qMNGg';    // Целевая таблица
-    const referenceSpreadsheetId = '1jViFNLCbTRXBkvBdkUenq7K727gJNRp-IxRqBRIwJrI'; // Справочная таблица
+    const spreadsheetIds = {
+      source: '1uDNsA4GpRXWP5xQNUCr0s7l0ZyyJ7hThnQ6VSF1OwTI',       // Исходная таблица
+      target: '1oyaxJgF5tiLkholgWkUhdY_BIPFaP1cmKh-RJ2qMNGg',       // Целевая таблица
+      reference: '1jViFNLCbTRXBkvBdkUenq7K727gJNRp-IxRqBRIwJrI'     // Справочная таблица
+    };
 
-    // Открытие таблиц
-    const sourceSpreadsheet = SpreadsheetApp.openById(sourceSpreadsheetId);
-    const targetSpreadsheet = SpreadsheetApp.openById(targetSpreadsheetId);
-    const referenceSpreadsheet = SpreadsheetApp.openById(referenceSpreadsheetId);
+    const spreadsheets = {
+      source: SpreadsheetApp.openById(spreadsheetIds.source),
+      target: SpreadsheetApp.openById(spreadsheetIds.target),
+      reference: SpreadsheetApp.openById(spreadsheetIds.reference)
+    };
 
-    if (!sourceSpreadsheet || !targetSpreadsheet || !referenceSpreadsheet) {
-      Logger.log('Ошибка открытия таблиц');
-      return;
+    if (!Object.values(spreadsheets).every(sheet => sheet)) {
+      throw new Error('Ошибка открытия таблиц');
     }
 
-    // Получение листов с коэффициентами и стоимостью
-    const coefficientsSheet = targetSpreadsheet.getSheetByName('Коэффициенты');
-    const costSheet = targetSpreadsheet.getSheetByName('Стоимость');
-    
-    if (!coefficientsSheet || !costSheet) {
-      Logger.log('Листы не найдены');
-      return;
+    const targetSheets = {
+      coefficients: spreadsheets.target.getSheetByName('Коэффициенты'),
+      cost: spreadsheets.target.getSheetByName('Стоимость')
+    };
+
+    if (!Object.values(targetSheets).every(sheet => sheet)) {
+      throw new Error('Листы не найдены');
     }
 
     // Загрузка данных коэффициентов и стоимости
-    const coefficientsData = coefficientsSheet.getRange(1, 1, coefficientsSheet.getLastRow(), 2).getValues();
-    const costData = costSheet.getRange(2, 1, costSheet.getLastRow() - 1, 2).getDisplayValues();
+    const coefficientsData = targetSheets.coefficients.getRange(1, 1, targetSheets.coefficients.getLastRow(), 2).getValues();
+    const costData = targetSheets.cost.getRange(2, 1, targetSheets.cost.getLastRow() - 1, 3).getDisplayValues();
 
-    const sourceSheets = sourceSpreadsheet.getSheets();
+    // Справочные данные
+    const referenceSheet = spreadsheets.reference.getSheets()[0];
+    if (!referenceSheet) throw new Error('Справочный лист не найден');
+    const referenceData = referenceSheet.getRange(1, 1, referenceSheet.getLastRow(), 2).getValues();
 
     // Обработка каждого листа исходной таблицы
-    for (const sourceSheet of sourceSheets) {
+    spreadsheets.source.getSheets().forEach(sourceSheet => {
       const sheetName = sourceSheet.getName();
-      
-      // Проверка формата имени листа (ММ.ГГГГ)
-      if (!/^\d{2}\.\d{4}$/.test(sheetName)) continue;
+      if (!/^\d{2}\.\d{4}$/.test(sheetName)) return;
 
-      // Создание или получение целевого листа
-      let targetSheet = targetSpreadsheet.getSheetByName(sheetName);
-      if (!targetSheet) {
-        const [month, year] = sheetName.split('.');
-        const prevDate = new Date(parseInt(year), parseInt(month) - 2, 1);
-        const prevSheetName = `${String(prevDate.getMonth() + 1).padStart(2, '0')}.${prevDate.getFullYear()}`;
-        
-        const prevSheet = targetSpreadsheet.getSheetByName(prevSheetName);
-        
-        if (prevSheet) {
-          // Копирование структуры предыдущего листа
-          targetSheet = prevSheet.copyTo(targetSpreadsheet).setName(sheetName);
-          const range = targetSheet.getRange(2, 1, targetSheet.getLastRow() - 1, targetSheet.getLastColumn());
-          range.clearContent();
-        } else {
-          // Создание нового листа с заголовками
-          targetSheet = targetSpreadsheet.insertSheet(sheetName);
-          targetSheet.getRange('A1:G1').setValues([['№', 'Номер', 'Тип', 'Период', 'Время на парковке', 'Коэффициент', 'Стоимость стоянки']]);
-        }
-      }
-
-      // Получение справочных данных
-      const referenceSheet = referenceSpreadsheet.getSheets()[0];
-      if (!referenceSheet) continue;
-
+      let targetSheet = getOrCreateTargetSheet(spreadsheets.target, sheetName);
       const lastRowSource = sourceSheet.getLastRow();
-      const lastRowRef = referenceSheet.getLastRow();
+      if (lastRowSource < 2) return;
 
-      if (lastRowSource < 2 || lastRowRef < 2) continue;
-
-      // Получение данных из исходного и справочного листов
-      const sourceData = sourceSheet.getRange(2, 1, lastRowSource - 1, 3).getValues();
-      const referenceData = referenceSheet.getRange(1, 1, lastRowRef, 2).getValues();
+      // Получаем данные из исходного листа
+      const sourceData = sourceSheet.getRange(2, 1, lastRowSource - 1, 4).getValues();
+      const currentCost = costData.find(row => row[0] === sheetName);
       
-      // Поиск стоимости для текущего периода
-      const hourlyCost = costData.find(row => row[0] === sheetName);
-      const hourlyCostValue = hourlyCost ? parseFloat(hourlyCost[1].toString().replace(',', '.')) : 0;
+      if (!currentCost) return;
 
-      // Обработка и подготовка данных для целевого листа
-      const targetData = sourceData.map((row, index) => {
-        const targetRow = [];
-        targetRow.push(index + 1); // №
-        targetRow.push(row[0] || ''); // Номер
-        
-        const referenceValue = referenceData.find(ref => ref[0] === row[0]);
-        targetRow.push(referenceValue ? referenceValue[1] : ''); // Тип
-        
-        targetRow.push(row[2] ? row[2].toString().replace(/, /g, '\n') : ''); // Период
-        
-        // Расчет количества дней и часов
-        const timeStr = row[2] ? row[2].toString() : '';
-        const daysMatch = timeStr.match(/(\d+)\s*д/);
-        const hoursMatch = timeStr.match(/(\d+)\s*ч/);
-        
-        const days = daysMatch ? parseInt(daysMatch[1]) : 0;
-        const hours = hoursMatch ? parseInt(hoursMatch[1]) : 0;
-        
-        const totalHours = (days * 24) + hours;
-        targetRow.push(totalHours + ' ч.'); // Время на парковке в часах
-        
-        // Поиск и применение коэффициента
-        const coefficient = coefficientsData.find(coef => 
-          referenceValue && referenceValue[1] && 
-          coef[0] && referenceValue[1].toString().includes(coef[0].toString())
-        );
-        const coefficientValue = coefficient ? parseFloat(coefficient[1].toString().replace(',', '.')) : 0;
-        targetRow.push(coefficientValue); // Коэффициент
-        
-        // Расчет стоимости стоянки (теперь используем почасовую ставку)
-        const parkingCost = totalHours * coefficientValue * hourlyCostValue;
-        targetRow.push(parkingCost.toFixed(2) + ' BYN'); // Стоимость стоянки в формате BYN
-        
-        return targetRow;
-      });
+      const hourlyRate = parseFloat(currentCost[1].toString().replace(',', '.'));
+      const minuteRate = parseFloat(currentCost[2].toString().replace(',', '.'));
 
-      // Запись данных в целевой лист
-      if (targetData.length > 0) {
-        targetSheet.getRange(2, 1, targetData.length, 7).setValues(targetData);
+      const processedData = processSourceData(sourceData, referenceData, coefficientsData, hourlyRate, minuteRate);
+      
+      if (processedData.length > 0) {
+        // Очищаем существующие данные
+        if (targetSheet.getLastRow() > 1) {
+          targetSheet.getRange(2, 1, targetSheet.getLastRow() - 1, 7).clearContent();
+        }
+        // Записываем новые данные
+        targetSheet.getRange(2, 1, processedData.length, 7).setValues(processedData);
       }
-    }
+    });
 
-    // Показ уведомления при ручном запуске
-    if (!e || !e.triggerUid) {
+    if (!e?.triggerUid) {
       SpreadsheetApp.getUi().alert('Данные успешно обновлены!');
     }
     
   } catch (error) {
-    if (!e || !e.triggerUid) {
+    Logger.log('Ошибка: ' + error.toString());
+    if (!e?.triggerUid) {
       SpreadsheetApp.getUi().alert('Произошла ошибка: ' + error.toString());
     }
-    Logger.log('Ошибка: ' + error.toString());
   }
+}
+
+/**
+ * Создает или получает целевой лист
+ */
+function getOrCreateTargetSheet(targetSpreadsheet, sheetName) {
+  let targetSheet = targetSpreadsheet.getSheetByName(sheetName);
+  if (!targetSheet) {
+    targetSheet = targetSpreadsheet.insertSheet(sheetName);
+    const headers = [['№', 'Номер', 'Тип', 'Период', 'Время на парковке', 'Коэффициент', 'Стоимость стоянки']];
+    targetSheet.getRange(1, 1, 1, 7).setValues(headers);
+  }
+  return targetSheet;
+}
+
+/**
+ * Конвертирует строку времени в минуты
+ */
+function timeStringToMinutes(timeStr) {
+  if (!timeStr) return 0;
+  
+  let totalMinutes = 0;
+  
+  // Поиск дней
+  const daysMatch = timeStr.match(/(\d+)\s*д/);
+  if (daysMatch) {
+    totalMinutes += parseInt(daysMatch[1]) * 24 * 60;
+  }
+  
+  // Поиск часов
+  const hoursMatch = timeStr.match(/(\d+)\s*ч/);
+  if (hoursMatch) {
+    totalMinutes += parseInt(hoursMatch[1]) * 60;
+  }
+  
+  // Поиск минут
+  const minutesMatch = timeStr.match(/(\d+)\s*мин/);
+  if (minutesMatch) {
+    totalMinutes += parseInt(minutesMatch[1]);
+  }
+  
+  return totalMinutes;
+}
+
+/**
+ * Форматирует время для отображения
+ */
+function formatTime(minutes) {
+  if (minutes <= 120) { // 2 часа или меньше
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    
+    if (hours === 0) {
+      return `${remainingMinutes} мин.`;
+    } else {
+      return `${hours} ч. ${remainingMinutes} мин.`;
+    }
+  } else {
+    const days = Math.floor(minutes / (24 * 60));
+    return `${days} д.`;
+  }
+}
+
+/**
+ * Обрабатывает исходные данные и возвращает подготовленные данные для целевого листа
+ */
+function processSourceData(sourceData, referenceData, coefficientsData, hourlyRate, minuteRate) {
+  return sourceData.map((row, index) => {
+    const carNumber = row[0];
+    const referenceValue = referenceData.find(ref => ref[0] === carNumber);
+    const timeInMinutes = timeStringToMinutes(row[3]); // Используем столбец D (индекс 3)
+    const formattedTime = formatTime(timeInMinutes);
+    
+    // Находим коэффициент
+    const coefficient = coefficientsData.find(coef => 
+      referenceValue?.[1] && coef[0] && 
+      referenceValue[1].toString().includes(coef[0].toString())
+    );
+    const coefficientValue = coefficient ? parseFloat(coefficient[1].toString().replace(',', '.')) : 0;
+    
+    // Расчет стоимости
+    let parkingCost;
+    if (timeInMinutes <= 120) { // 2 часа или меньше
+      parkingCost = timeInMinutes * minuteRate * coefficientValue;
+    } else {
+      const days = Math.floor(timeInMinutes / (24 * 60));
+      parkingCost = days * 24 * hourlyRate * coefficientValue;
+    }
+
+    return [
+      index + 1,                  // №
+      carNumber,                  // Номер
+      referenceValue ? referenceValue[1] : '', // Тип
+      row[2] ? row[2].toString().replace(/, /g, '\n') : '', // Период
+      formattedTime,              // Время на парковке
+      coefficientValue,           // Коэффициент
+      parkingCost.toFixed(2) + ' BYN' // Стоимость стоянки
+    ];
+  });
 }
